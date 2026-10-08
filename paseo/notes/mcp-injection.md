@@ -3,8 +3,10 @@
 `daemon.mcp.enabled` and `daemon.mcp.injectIntoAgents` are true.
 Each exact provider ID has an explicit `paseoTools.enabled` policy:
 
-- `codex-supervisor`, `codex-lead`: true.
-- `codex-peer` and all other configured/built-in providers: false.
+- `codex-supervisor`, `codex-lead`, `claude-supervisor`, `claude-lead`,
+  `omp-supervisor`, `omp-lead`: true.
+- `codex-peer`, `claude-peer`, `omp-peer`, and all other configured/built-in
+  providers: false.
 
 Peer receives neither the Paseo MCP server nor the native Paseo tool catalog.
 `injectIntoProviders` was specific to the retired fork and must not be retained.

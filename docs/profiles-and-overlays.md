@@ -2,11 +2,11 @@
 
 The word “profile” appears at three different levels:
 
-1. **Paseo custom provider:** `codex-supervisor`, `codex-lead`, or `codex-peer` extends the built-in Codex adapter.
-2. **Codex Room overlay:** a focused TOML fragment merged into a generated `CODEX_HOME`.
+1. **Paseo custom provider:** `codex-<role>` extends the built-in Codex adapter; `claude-<role>` and `omp-<role>` extend the Claude Code and oh-my-pi adapters.
+2. **Codex Room overlay:** a focused TOML fragment. Codex merges it into a generated `CODEX_HOME`; `agent-room` reads only its `developer_instructions` for Claude/omp.
 3. **Native Codex profile:** selected through `codex --profile`; this room does not use that mechanism.
 
-Changing a Paseo provider model affects the model picker and Paseo default. Changing an overlay affects the Codex process default after the next sync. Keep both aligned deliberately.
+Changing a Paseo provider model affects the model picker and Paseo default. Changing an overlay affects the Codex process default after the next sync. Keep both aligned deliberately. Claude/omp role providers inherit their runtime's model catalog; an overlay's `developer_instructions` change reaches them on the next new session without a sync.
 
 The Peer overlay owns one bounded implementation, investigation, architecture,
 or read-only candidate review outcome. Peer has no Paseo MCP injection and its

@@ -12,7 +12,7 @@ remove_if_managed() {
   local source_path="$1"
   local target_path="$2"
   local temporary
-  [[ -f "$target_path" ]] || return
+  [[ -f "$target_path" ]] || return 0
   temporary=$(mktemp "${TMPDIR:-/tmp}/codex-room-uninstall.XXXXXX")
   render_home_tokens "$source_path" "$temporary"
   if ! cmp -s "$temporary" "$target_path"; then
@@ -29,7 +29,7 @@ remove_if_managed() {
 remove_managed_paseo_link() {
   local target_path="$HOME/.local/bin/paseo"
   local expected="$HOME/projects/supervisors/paseo/packages/cli/bin/paseo"
-  [[ -L "$target_path" ]] || return
+  [[ -L "$target_path" ]] || return 0
   if [[ "$(readlink "$target_path")" != "$expected" ]]; then
     warn "preserving unmanaged symlink: $target_path"
     return
@@ -49,8 +49,17 @@ done <<'EOF'
 .config/codex-room/overlays/lead.config.toml|.config/codex-room/overlays/lead.config.toml
 .config/codex-room/overlays/peer.config.toml|.config/codex-room/overlays/peer.config.toml
 .config/codex-room/workflow/WORKSPACE_PROTOCOL.md|.config/codex-room/workflow/WORKSPACE_PROTOCOL.md
+.config/codex-room/omp-room.config.yml|.config/codex-room/omp-room.config.yml
+.config/codex-room/skills/spec-orchestration/SKILL.md|.config/codex-room/skills/spec-orchestration/SKILL.md
+.config/codex-room/skills/spec-orchestration/reference.md|.config/codex-room/skills/spec-orchestration/reference.md
+.config/codex-room/skills/spec-orchestration/questions.md|.config/codex-room/skills/spec-orchestration/questions.md
+.config/codex-room/skills/spec-orchestration/brief-template.md|.config/codex-room/skills/spec-orchestration/brief-template.md
+.config/codex-room/skills/spec-orchestration/scripts/frontier.py|.config/codex-room/skills/spec-orchestration/scripts/frontier.py
+.config/codex-room/skills/spec-orchestration/scripts/ticket-field.py|.config/codex-room/skills/spec-orchestration/scripts/ticket-field.py
+.config/codex-room/skills/spec-orchestration/scripts/tree-audit.py|.config/codex-room/skills/spec-orchestration/scripts/tree-audit.py
 .local/bin/codex-room|.local/bin/codex-room
 .local/bin/codex-room-sync|.local/bin/codex-room-sync
+.local/bin/agent-room|.local/bin/agent-room
 .local/bin/paseo-local-update|.local/bin/paseo-local-update
 .paseo/config.json.template|.paseo/config.json
 EOF

@@ -1,0 +1,5 @@
+# Loaded by agent-room with `omp --config` for every Room role session.
+# A top-level recursion depth of 0 removes omp's native `task` subagent tool,
+# so delegation happens only through Paseo roles.
+task:
+  maxRecursionDepth: 0

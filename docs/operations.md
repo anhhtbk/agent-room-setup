@@ -76,8 +76,9 @@ notebooks, runtime/session state, and operator-owned `.codex` bytes.
 
 The installer does not restart the daemon because an active restart can
 interrupt running agents. The source contract keeps exactly three room
-providers and injects Paseo MCP into Supervisor and Lead only. A live provider
-inventory still needs an operator check with a running daemon.
+providers per runtime (`codex-*`, `claude-*`, `omp-*`) and injects Paseo MCP
+into Supervisor and Lead only. A live provider inventory still needs an
+operator check with a running daemon.
 
 ## Update the stable Paseo release
 

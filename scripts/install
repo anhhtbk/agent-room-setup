@@ -93,8 +93,17 @@ done <<'EOF'
 .config/codex-room/overlays/lead.config.toml|.config/codex-room/overlays/lead.config.toml|600
 .config/codex-room/overlays/peer.config.toml|.config/codex-room/overlays/peer.config.toml|600
 .config/codex-room/workflow/WORKSPACE_PROTOCOL.md|.config/codex-room/workflow/WORKSPACE_PROTOCOL.md|644
+.config/codex-room/omp-room.config.yml|.config/codex-room/omp-room.config.yml|644
+.config/codex-room/skills/spec-orchestration/SKILL.md|.config/codex-room/skills/spec-orchestration/SKILL.md|644
+.config/codex-room/skills/spec-orchestration/reference.md|.config/codex-room/skills/spec-orchestration/reference.md|644
+.config/codex-room/skills/spec-orchestration/questions.md|.config/codex-room/skills/spec-orchestration/questions.md|644
+.config/codex-room/skills/spec-orchestration/brief-template.md|.config/codex-room/skills/spec-orchestration/brief-template.md|644
+.config/codex-room/skills/spec-orchestration/scripts/frontier.py|.config/codex-room/skills/spec-orchestration/scripts/frontier.py|755
+.config/codex-room/skills/spec-orchestration/scripts/ticket-field.py|.config/codex-room/skills/spec-orchestration/scripts/ticket-field.py|755
+.config/codex-room/skills/spec-orchestration/scripts/tree-audit.py|.config/codex-room/skills/spec-orchestration/scripts/tree-audit.py|755
 .local/bin/codex-room|.local/bin/codex-room|755
 .local/bin/codex-room-sync|.local/bin/codex-room-sync|755
+.local/bin/agent-room|.local/bin/agent-room|755
 .local/bin/paseo-local-update|.local/bin/paseo-local-update|755
 .paseo/config.json.template|.paseo/config.json|600
 EOF

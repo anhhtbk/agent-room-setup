@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import shlex
 import signal
 import subprocess
 import sys
@@ -19,6 +20,7 @@ ROOM = HOME_MIRROR / ".config" / "codex-room"
 PASEO_TEMPLATE = HOME_MIRROR / ".paseo" / "config.json.template"
 SYNC = HOME_MIRROR / ".local" / "bin" / "codex-room-sync"
 LAUNCHER = HOME_MIRROR / ".local" / "bin" / "codex-room"
+AGENT_ROOM = HOME_MIRROR / ".local" / "bin" / "agent-room"
 SYNC_ALL = ROOT / "scripts" / "sync-all"
 
 
@@ -40,7 +42,7 @@ class SetupShapeTests(unittest.TestCase):
         subprocess.run(["git", "-C", str(work), "add", "."], check=True)
         subprocess.run(["git", "-C", str(work), "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "two"], check=True)
         second = subprocess.run(["git", "-C", str(work), "rev-parse", "HEAD"], check=True, capture_output=True, text=True).stdout.strip()
-        subprocess.run(["git", "-C", str(work), "tag", "v0.8.0"], check=True)
+        subprocess.run(["git", "-C", str(work), "tag", "v0.9.2"], check=True)
         subprocess.run(["git", "clone", "-q", "--bare", str(work), str(remote)], check=True)
         return remote, first, second
 
@@ -67,7 +69,7 @@ class SetupShapeTests(unittest.TestCase):
         env = os.environ.copy()
         env.update({
             "HOME": str(home), "PASEO_REPO_DIR": str(target),
-            "PASEO_SOURCE_URL": str(remote), "PASEO_RELEASE_TAG": "v0.8.0",
+            "PASEO_SOURCE_URL": str(remote), "PASEO_RELEASE_TAG": "v0.9.2",
             "PASEO_BRANCH": "main", "PASEO_VERIFIED_COMMIT": commit,
             "PASEO_NPM_BIN": str(npm), "NPM_LOG": str(home.parent / "npm.log"),
         })
@@ -85,15 +87,20 @@ class SetupShapeTests(unittest.TestCase):
     def test_paseo_template_is_valid_and_has_expected_roles(self) -> None:
         config = json.loads(PASEO_TEMPLATE.read_text().replace("@@HOME@@", "/tmp/operator"))
         providers = config["agents"]["providers"]
-        room_roles = sorted(name for name in providers if name.startswith("codex-"))
-        self.assertEqual(
-            room_roles,
-            ["codex-lead", "codex-peer", "codex-supervisor"],
-        )
+        orchestrators = set()
+        for runtime in ("codex", "claude", "omp"):
+            room_roles = sorted(name for name in providers if name.startswith(f"{runtime}-"))
+            self.assertEqual(room_roles, [f"{runtime}-lead", f"{runtime}-peer", f"{runtime}-supervisor"])
+            self.assertIn("without Paseo orchestration tools", providers[f"{runtime}-peer"]["description"])
+            orchestrators |= {f"{runtime}-supervisor", f"{runtime}-lead"}
+        for runtime in ("claude", "omp"):
+            for role in ("supervisor", "lead", "peer"):
+                provider = providers[f"{runtime}-{role}"]
+                self.assertEqual(provider["extends"], runtime)
+                self.assertEqual(provider["command"], ["/tmp/operator/.local/bin/agent-room", runtime, role])
         self.assertNotIn("injectIntoProviders", config["daemon"]["mcp"])
         for name, provider in config["agents"]["providers"].items():
-            self.assertEqual(provider["paseoTools"]["enabled"], name in ("codex-supervisor", "codex-lead"))
-        self.assertIn("without Paseo orchestration tools", providers["codex-peer"]["description"])
+            self.assertEqual(provider["paseoTools"]["enabled"], name in orchestrators, name)
         self.assertIn(
             "Do not spawn, manage, or coordinate other agents",
             (ROOM / "overlays/peer.config.toml").read_text(),
@@ -493,7 +500,7 @@ class SetupShapeTests(unittest.TestCase):
 
         self.assertIn('url = "https://github.com/getpaseo/paseo.git"', paseo_source)
         self.assertIn(
-            'verified_commit = "b8e24677e12b226c7c38c1c3a40649daa9f1152f"',
+            'verified_commit = "c67b7158b441bb09026b38d86ae335cc4b49190a"',
             paseo_source,
         )
         for forbidden in ("git pull", "git rebase", "git reset", "npm install"):
@@ -558,7 +565,7 @@ class SetupShapeTests(unittest.TestCase):
                 bin_dir / "git",
                 "#!/bin/sh\n"
                 "if [ \"$1\" = -C ] && [ \"$3\" = rev-parse ]; then\n"
-                " case \"$2\" in \"$PASEO_REPO_DIR\") echo b8e24677e12b226c7c38c1c3a40649daa9f1152f ;; *) exec /usr/bin/git \"$@\" ;; esac\n"
+                " case \"$2\" in \"$PASEO_REPO_DIR\") echo c67b7158b441bb09026b38d86ae335cc4b49190a ;; *) exec /usr/bin/git \"$@\" ;; esac\n"
                 "else exec /usr/bin/git \"$@\"; fi\n"
             )
             env = os.environ.copy(); env.update({
@@ -1544,6 +1551,219 @@ class RuntimeGenerationTests(unittest.TestCase):
         runtime = self.run_sync("supervisor")
         self.assertIn("[mcp_servers.example]", (runtime / "config.toml").read_text())
         self.assertFalse((runtime / "SUPERVISOR_NOTEBOOK.md").exists())
+
+
+class AgentRoomLauncherTests(unittest.TestCase):
+    """Behavior of ``agent-room``, the Claude Code/omp role launcher."""
+
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.log = self.root / "launches.jsonl"
+        self.env = os.environ.copy()
+        self.env["CODEX_ROOM_CONFIG_HOME"] = str(ROOM)
+        for runtime, variable in (("claude", "CLAUDE_BIN"), ("omp", "OMP_BIN")):
+            binary = self.root / runtime
+            binary.write_text(
+                f"#!{sys.executable}\nimport json, sys\n"
+                f"open({str(self.log)!r}, 'a').write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            )
+            binary.chmod(0o755)
+            self.env[variable] = str(binary)
+
+    def launch(self, *args: str) -> list[str]:
+        result = subprocess.run([str(AGENT_ROOM), *args], env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(self.log.read_text().splitlines()[-1])
+
+    def flag_values(self, argv: list[str], flag: str) -> list[str]:
+        return [argv[index + 1] for index, arg in enumerate(argv) if arg == flag]
+
+    def test_claude_session_hook_injects_role_and_keeps_host_settings(self) -> None:
+        argv = self.launch(
+            "claude", "lead", "--output-format", "stream-json",
+            "--settings", '{"cleanupPeriodDays":30,"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"host-hook"}]}]}}',
+        )
+        [settings_text] = self.flag_values(argv, "--settings")
+        settings = json.loads(settings_text)
+        self.assertEqual(settings["cleanupPeriodDays"], 30)
+        commands = [hook["command"] for entry in settings["hooks"]["SessionStart"] for hook in entry["hooks"]]
+        self.assertEqual(commands[0], "host-hook")
+        context = subprocess.run(
+            shlex.split(commands[1]), input="{}", env=self.env, capture_output=True, text=True, check=True,
+        ).stdout
+        output = json.loads(context)["hookSpecificOutput"]
+        self.assertEqual(output["hookEventName"], "SessionStart")
+        self.assertTrue(output["additionalContext"].startswith("Room role: Lead."))
+        self.assertEqual(argv[-2:], ["--output-format", "stream-json"])
+
+    def test_claude_settings_file_is_merged(self) -> None:
+        settings_file = self.root / "host-settings.json"
+        settings_file.write_text('{"model":"sonnet"}')
+        argv = self.launch("claude", "peer", f"--settings={settings_file}")
+        [settings_text] = self.flag_values(argv, "--settings")
+        settings = json.loads(settings_text)
+        self.assertEqual(settings["model"], "sonnet")
+        self.assertEqual(len(settings["hooks"]["SessionStart"]), 1)
+
+    def test_claude_subagent_tool_is_added_to_host_denials_once(self) -> None:
+        argv = self.launch("claude", "peer", "--disallowedTools", "Bash,Agent", "--disallowed-tools", "WebFetch")
+        self.assertEqual(self.flag_values(argv, "--disallowedTools"), ["Bash,Agent,WebFetch,Workflow"])
+        self.assertNotIn("--disallowed-tools", argv)
+        argv = self.launch("claude", "peer", "--verbose")
+        self.assertEqual(self.flag_values(argv, "--disallowedTools"), ["Agent,Workflow"])
+
+    def test_omp_role_prompt_folds_in_host_prompt(self) -> None:
+        argv = self.launch("omp", "supervisor", "--mode", "rpc-ui", "--append-system-prompt=overridden-host-marker", "--append-system-prompt", "host")
+        [prompt] = self.flag_values(argv, "--append-system-prompt")
+        self.assertTrue(prompt.startswith("Room role: Supervisor."))
+        self.assertTrue(prompt.endswith("\n\nhost"))
+        self.assertNotIn("overridden-host-marker", prompt)
+        self.assertEqual(self.flag_values(argv, "--config"), [str(ROOM / "omp-room.config.yml")])
+        self.assertEqual(argv[-2:], ["--mode", "rpc-ui"])
+
+    def test_omp_host_prompt_file_is_read(self) -> None:
+        prompt_file = self.root / "host-prompt.md"
+        prompt_file.write_text("from file")
+        argv = self.launch("omp", "lead", "--append-system-prompt", str(prompt_file))
+        [prompt] = self.flag_values(argv, "--append-system-prompt")
+        self.assertTrue(prompt.endswith("\n\nfrom file"))
+
+    def test_probes_and_subcommands_pass_through_unchanged(self) -> None:
+        self.assertEqual(self.launch("claude", "lead", "--version"), ["--version"])
+        self.assertEqual(self.launch("claude", "lead", "auth", "status"), ["auth", "status"])
+        self.assertEqual(self.launch("omp", "peer", "--version"), ["--version"])
+
+    def test_invalid_role_runtime_or_overlay_fails_before_exec(self) -> None:
+        broken = self.root / "room"
+        (broken / "overlays").mkdir(parents=True)
+        (broken / "overlays/lead.config.toml").write_text('model = "x"\n')
+        (broken / "omp-room.config.yml").write_text("task:\n  maxRecursionDepth: 0\n")
+        cases = [
+            (("claude", "review"), self.env),
+            (("codex", "lead"), self.env),
+            (("claude", "lead", "--verbose"), {**self.env, "CODEX_ROOM_CONFIG_HOME": str(broken)}),
+            (("omp", "lead", "--mode", "rpc"), {**self.env, "CODEX_ROOM_CONFIG_HOME": str(broken)}),
+        ]
+        for args, env in cases:
+            result = subprocess.run([str(AGENT_ROOM), *args], env=env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0, args)
+        self.assertFalse(self.log.exists())
+
+
+SPEC_SCRIPTS = ROOM / "skills" / "spec-orchestration" / "scripts"
+
+
+class SpecOrchestrationScriptTests(unittest.TestCase):
+    """Behavior of the Lead's spec-orchestration helper scripts."""
+
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+
+    def script(self, name: str, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run([sys.executable, str(SPEC_SCRIPTS / name), *args], capture_output=True, text=True)
+
+    def ticket(self, spec: Path, name: str, headers: str) -> Path:
+        path = spec / "issues" / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(f"# {name}\n\n{headers}\n\n## What to build\n\n- [ ] first\n- [ ] second\n")
+        return path
+
+    def test_frontier_respects_blockers_touches_and_running_conflicts(self) -> None:
+        spec = self.root / "spec"
+        self.ticket(spec, "01-done.md", "Status: done\nTouches: api:src/a/**")
+        self.ticket(spec, "02-ready.md", "Status: ready-for-agent\nBlocked by: 01\nTouches: api:src/b/**")
+        self.ticket(spec, "03-clash.md", "**Status:** ready-for-agent\n**Touches:** api:src/c/x.cs")
+        self.ticket(spec, "04-running.md", "Status: in-progress\nTouches: api:src/c/**")
+        self.ticket(spec, "05-untouched.md", "Status: todo")
+        self.ticket(spec, "06-waiting.md", "Status: ready-for-agent\nBlocked by: 02\nTouches: web:src/**")
+        self.ticket(spec, "07-other-repo.md", "Status: needs-fix\nTouches: web:src/c/**")
+        result = self.script("frontier.py", str(spec), "--running", "02")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        verdicts = {line.split("\t")[0]: line.split("\t")[-1] for line in result.stdout.splitlines()}
+        self.assertEqual(verdicts, {
+            "01": "", "02": "FRONTIER", "03": "CONFLICT:04", "04": "",
+            "05": "NEEDS-TOUCHES", "06": "", "07": "FRONTIER",
+        })
+
+    def test_ticket_field_edits_headers_comments_and_checkboxes(self) -> None:
+        path = self.ticket(self.root / "spec", "01-a.md", "**Status:** ready-for-agent\nRepo: api")
+        for args in (("Status", "in-progress"), ("Touches", "api:src/**"), ("--comment", "dispatched"),
+                     ("--tick", "second"), ("--comment", "reviewed")):
+            result = self.script("ticket-field.py", str(path), *args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        text = path.read_text()
+        head, _, body = text.partition("\n## What to build")
+        self.assertIn("**Status:** in-progress", head)
+        self.assertIn("Repo: api\nTouches: api:src/**", head)
+        self.assertIn("- [ ] first\n- [x] second", body)
+        comments = body.split("## Comments", 1)[1].strip().splitlines()
+        self.assertEqual([line.split(" ", 3)[3] for line in comments], ["dispatched", "reviewed"])
+
+    def git(self, *args: str) -> str:
+        return subprocess.run(
+            ["git", "-C", str(self.repo), "-c", "user.name=Test", "-c", "user.email=test@example.invalid", *args],
+            check=True, capture_output=True, text=True,
+        ).stdout
+
+    def audited_repo(self) -> Path:
+        self.repo = self.root / "repo"
+        self.repo.mkdir()
+        self.git("init", "-q", "-b", "main")
+        (self.repo / "shared.txt").write_text("one\n")
+        (self.repo / "human.txt").write_text("committed\n")
+        self.git("add", ".")
+        self.git("commit", "-qm", "base")
+        (self.repo / "human.txt").write_text("human edit in progress\n")
+        spec = self.repo / "spec"
+        self.ticket(spec, "01-a.md", "Status: ready-for-agent")
+        baseline = spec / ".room" / "baseline.json"
+        baseline.parent.mkdir()
+        result = self.script("tree-audit.py", "snapshot", str(baseline), str(self.repo))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return baseline
+
+    def audit(self, baseline: Path, *flags: str) -> subprocess.CompletedProcess[str]:
+        return self.script("tree-audit.py", "check", str(baseline), *flags)
+
+    def test_tree_audit_accepts_pathspec_commits_and_reports_uncommitted_work(self) -> None:
+        baseline = self.audited_repo()
+        (self.repo / "peer.txt").write_text("peer\n")
+        self.git("add", "--", "peer.txt")
+        self.git("commit", "-qm", "peer work", "--", "peer.txt")
+        (self.repo / "running.txt").write_text("in progress\n")
+        self.script("ticket-field.py", str(self.repo / "spec/issues/01-a.md"), "Status", "done")
+        result = self.audit(baseline)
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("UNCOMMITTED", result.stdout)
+        self.assertIn("running.txt", result.stdout)
+        self.assertNotIn("spec/", result.stdout)
+        quiet = self.audit(baseline, "--quiet-point")
+        self.assertEqual(quiet.returncode, 1)
+        self.assertEqual([line for line in quiet.stdout.splitlines() if line.startswith("VIOLATION")],
+                         [f"VIOLATION {self.repo.resolve()}: uncommitted change: running.txt"])
+
+    def test_tree_audit_detects_destructive_operations(self) -> None:
+        operations = {
+            "stash": lambda: self.git("stash", "-q"),
+            "switch": lambda: self.git("switch", "-qc", "other"),
+            "reset": lambda: (self.git("commit", "-qm", "extra", "--allow-empty"), self.git("reset", "-q", "--soft", "HEAD~1")),
+            "amend": lambda: self.git("commit", "-q", "--amend", "-m", "rewritten", "--allow-empty"),
+            "human file committed": lambda: self.git("commit", "-qm", "take", "--", "human.txt"),
+            "human file discarded": lambda: (self.repo / "human.txt").write_text("committed\n"),
+        }
+        for name, operation in operations.items():
+            with self.subTest(name):
+                shutil.rmtree(self.root / "repo", ignore_errors=True)
+                baseline = self.audited_repo()
+                operation()
+                result = self.audit(baseline)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("VIOLATION", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

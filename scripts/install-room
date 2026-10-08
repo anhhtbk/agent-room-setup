@@ -83,8 +83,17 @@ MANAGED_FILES = (
     (".config/codex-room/overlays/lead.config.toml", ".config/codex-room/overlays/lead.config.toml", 0o600),
     (".config/codex-room/overlays/peer.config.toml", ".config/codex-room/overlays/peer.config.toml", 0o600),
     (".config/codex-room/workflow/WORKSPACE_PROTOCOL.md", ".config/codex-room/workflow/WORKSPACE_PROTOCOL.md", 0o644),
+    (".config/codex-room/omp-room.config.yml", ".config/codex-room/omp-room.config.yml", 0o644),
+    (".config/codex-room/skills/spec-orchestration/SKILL.md", ".config/codex-room/skills/spec-orchestration/SKILL.md", 0o644),
+    (".config/codex-room/skills/spec-orchestration/reference.md", ".config/codex-room/skills/spec-orchestration/reference.md", 0o644),
+    (".config/codex-room/skills/spec-orchestration/questions.md", ".config/codex-room/skills/spec-orchestration/questions.md", 0o644),
+    (".config/codex-room/skills/spec-orchestration/brief-template.md", ".config/codex-room/skills/spec-orchestration/brief-template.md", 0o644),
+    (".config/codex-room/skills/spec-orchestration/scripts/frontier.py", ".config/codex-room/skills/spec-orchestration/scripts/frontier.py", 0o755),
+    (".config/codex-room/skills/spec-orchestration/scripts/ticket-field.py", ".config/codex-room/skills/spec-orchestration/scripts/ticket-field.py", 0o755),
+    (".config/codex-room/skills/spec-orchestration/scripts/tree-audit.py", ".config/codex-room/skills/spec-orchestration/scripts/tree-audit.py", 0o755),
     (".local/bin/codex-room", ".local/bin/codex-room", 0o755),
     (".local/bin/codex-room-sync", ".local/bin/codex-room-sync", 0o755),
+    (".local/bin/agent-room", ".local/bin/agent-room", 0o755),
     (".local/bin/paseo-local-update", ".local/bin/paseo-local-update", 0o755),
     (".paseo/config.json.template", ".paseo/config.json", 0o600),
 )
@@ -1049,6 +1058,10 @@ def print_plan(home: Path) -> int:
     for relative, state in obsolete_state(home):
         out(f"  {state.upper():17} {home / relative}")
     out("GENERATE  supervisor, lead, peer into existing CODEX runtime root")
+    for runtime, variable in (("claude", "CLAUDE_BIN"), ("omp", "OMP_BIN")):
+        found = command_path(os.environ.get(variable, runtime))
+        state = "found" if found else f"missing; {runtime}-* providers stay unavailable"
+        out(f"OPTIONAL  {runtime} runtime for agent-room roles: {state}")
     out("APPLY     staged Paseo/config/runtime publication with rollback on failure")
     out("VERIFY    installed state plus live provider inventory (use --verify; read-only)")
     try:

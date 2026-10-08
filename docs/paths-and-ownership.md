@@ -4,8 +4,11 @@
 
 ```text
 ~/.config/codex-room/model-instructions.md
+~/.config/codex-room/omp-room.config.yml
 ~/.config/codex-room/overlays/*.config.toml
+~/.config/codex-room/skills/spec-orchestration/**
 ~/.config/codex-room/workflow/WORKSPACE_PROTOCOL.md
+~/.local/bin/agent-room
 ~/.local/bin/codex-room
 ~/.local/bin/codex-room-sync
 ~/.local/bin/paseo -> ~/projects/supervisors/paseo/packages/cli/bin/paseo

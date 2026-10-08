@@ -36,6 +36,9 @@ if [[ "$mode" == source ]]; then
   workflow_root="$REPO_ROOT/home/.config/codex-room/workflow"
   sync_path="$REPO_ROOT/home/.local/bin/codex-room-sync"
   launcher_path="$REPO_ROOT/home/.local/bin/codex-room"
+  agent_launcher_path="$REPO_ROOT/home/.local/bin/agent-room"
+  omp_overlay_path="$REPO_ROOT/home/.config/codex-room/omp-room.config.yml"
+  skill_root="$REPO_ROOT/home/.config/codex-room/skills/spec-orchestration"
   obsolete_paths=(
     "$overlays_root/review.config.toml"
     "$overlays_root/harness.config.toml"
@@ -50,6 +53,9 @@ else
   workflow_root="$HOME/.config/codex-room/workflow"
   sync_path="$HOME/.local/bin/codex-room-sync"
   launcher_path="$HOME/.local/bin/codex-room"
+  agent_launcher_path="$HOME/.local/bin/agent-room"
+  omp_overlay_path="$HOME/.config/codex-room/omp-room.config.yml"
+  skill_root="$HOME/.config/codex-room/skills/spec-orchestration"
   obsolete_paths=(
     "$overlays_root/review.config.toml"
     "$overlays_root/harness.config.toml"
@@ -64,8 +70,19 @@ check "Paseo config exists" test -f "$config_template"
 check "Paseo config is valid JSON" jq -e . "$config_template"
 check "room sync exists" test -f "$sync_path"
 check "room launcher is executable" test -x "$launcher_path"
+check "Claude/omp room launcher is executable" test -x "$agent_launcher_path"
+check "omp room overlay exists" test -f "$omp_overlay_path"
+check "omp room overlay removes native subagents" grep -Eq '^[[:space:]]+maxRecursionDepth: 0$' "$omp_overlay_path"
 check "workspace protocol exists" test -f "$workflow_root/WORKSPACE_PROTOCOL.md"
 check "Paseo provenance manifest exists" test -f "$REPO_ROOT/paseo/source.toml"
+for skill_file in SKILL.md reference.md questions.md brief-template.md; do
+  check "spec-orchestration $skill_file exists" test -f "$skill_root/$skill_file"
+done
+for skill_script in frontier.py ticket-field.py tree-audit.py; do
+  check "spec-orchestration $skill_script is executable" test -x "$skill_root/scripts/$skill_script"
+done
+check "Lead routes spec folders to spec-orchestration" grep -Fq "skills/spec-orchestration/SKILL.md" "$overlays_root/lead.config.toml"
+check "writable Peers are capped at three" grep -Fq "three at once" "$workflow_root/WORKSPACE_PROTOCOL.md"
 
 for role in supervisor lead peer; do
   check "$role overlay exists" test -f "$overlays_root/$role.config.toml"
@@ -167,6 +184,10 @@ rejects_legacy_role() {
 }
 check "launcher rejects Review role" rejects_legacy_role review
 check "launcher rejects Harness role" rejects_legacy_role harness
+for runtime in claude omp; do
+  check "$runtime launcher rejects Review role" bash -c '! "$1" "$2" review >/dev/null 2>&1' bash "$agent_launcher_path" "$runtime"
+done
+check "Claude/omp launcher rejects unknown runtime" bash -c '! "$1" codex lead >/dev/null 2>&1' bash "$agent_launcher_path"
 check "launcher has one public role route" bash -c '! grep -Fq -- "--resolve-evidence-home" "$1"' bash "$launcher_path"
 
 check "Human authority is explicit" grep -Fq "Human owns product goals" "$workflow_root/WORKSPACE_PROTOCOL.md"
@@ -186,10 +207,30 @@ for active_contract in \
   done
 done
 
-check "exactly three derived Codex providers" jq -e '
-  [.agents.providers | keys[] | select(startswith("codex-"))] |
-  sort == ["codex-lead", "codex-peer", "codex-supervisor"]
-' "$config_template"
+room_providers_are_exact() {
+  jq -e --arg runtime "$1" '
+    [.agents.providers | keys[] | select(startswith($runtime + "-"))] | sort ==
+    ([$runtime + "-lead", $runtime + "-peer", $runtime + "-supervisor"])
+  ' "$config_template"
+}
+if [[ "$mode" == source ]]; then
+  provider_launcher="@@HOME@@/.local/bin/agent-room"
+else
+  provider_launcher="$HOME/.local/bin/agent-room"
+fi
+room_provider_launches_role() {
+  jq -e --arg runtime "$1" --arg launcher "$provider_launcher" '
+    [("supervisor", "lead", "peer") as $role |
+      .agents.providers[$runtime + "-" + $role] |
+      .extends == $runtime and .command == [$launcher, $runtime, $role]] | all
+  ' "$config_template"
+}
+for runtime in codex claude omp; do
+  check "exactly three derived $runtime providers" room_providers_are_exact "$runtime"
+done
+for runtime in claude omp; do
+  check "$runtime providers launch agent-room roles" room_provider_launches_role "$runtime"
+done
 check "exact Paseo tool boundary" jq -e -f "$REPO_ROOT/scripts/lib/paseo-tools.jq" "$config_template"
 
 if [[ "$mode" == installed ]]; then
@@ -276,8 +317,10 @@ if [[ "$live" == true ]]; then
   inventory_file=$(mktemp "${TMPDIR:-/tmp}/codex-room-provider-check.XXXXXX")
   if "$paseo_command" provider ls --host 127.0.0.1:6767 --json >"$inventory_file" 2>/dev/null; then
     check "exact live room provider inventory" jq -e '
-      [.[].provider | select(startswith("codex-"))] | sort ==
-      ["codex-lead", "codex-peer", "codex-supervisor"]
+      [.[].provider | select(test("^(codex|claude|omp)-"))] | sort ==
+      ["claude-lead", "claude-peer", "claude-supervisor",
+       "codex-lead", "codex-peer", "codex-supervisor",
+       "omp-lead", "omp-peer", "omp-supervisor"]
     ' "$inventory_file"
   else
     log "FAIL  live Paseo provider inventory is unreachable"

@@ -28,11 +28,19 @@ contract or invariants, acceptance evidence, and conditions that should reopen
 the decision. Do not edit the same moving scope while its Peer owns it.
 
 Run writable Peers in parallel only when each assignment has verified,
-accepted inputs and a separate write scope. Agree on shared contracts before
-dispatch. Sequence changes to shared files or interfaces; do not let multiple
+accepted inputs and a separate write scope, and never more than three at
+once. Agree on shared contracts before dispatch.
+Sequence changes to shared files or interfaces; do not let multiple
 Peers modify the same moving scope. Use separate branches or worktrees when
 needed. Do not start blocked work merely to increase parallel activity.
 Continue each ready branch without waiting for unrelated assignments.
+
+When Human gives a spec folder containing `spec.md` and `issues/NN-*.md`, or
+asks you to run such tickets, read and follow
+`~/.config/codex-room/skills/spec-orchestration/SKILL.md`. In that mode you
+write only ticket header lines, ticket comments, and the spec's `.room/`
+directory; every code change goes to a fresh Peer, and Peers commit locally
+on the current branch.
 
 Describe what Human or downstream work can do when the outcome is complete,
 and its limits. Give Peer enough context to start without prior conversation.

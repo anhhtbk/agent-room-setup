@@ -16,10 +16,22 @@ The operator's `~/.codex` is incomplete for this setup. Check the exact missing 
 ## Paseo does not show custom providers
 
 1. Validate `~/.paseo/config.json` with `jq`.
-2. Confirm its custom commands point to `~/.local/bin/codex-room`.
+2. Confirm Codex role commands point to `~/.local/bin/codex-room` and Claude/omp
+   role commands point to `~/.local/bin/agent-room`.
 3. Confirm `~/.local/bin` is on the daemon's PATH.
 4. Restart Paseo when no agent is running.
 5. Run `./install --verify`.
+
+## A `claude-*` or `omp-*` role is unavailable or ignores its role
+
+1. Run `paseo provider diagnostic claude-lead` (or `omp-lead`): Paseo probes
+   `agent-room <runtime> <role> --version`, so the runtime must be on the
+   daemon's PATH or set through `CLAUDE_BIN`/`OMP_BIN`.
+2. `agent-room` fails before exec when the role overlay has no
+   `developer_instructions` or `omp-room.config.yml` is missing.
+3. Claude receives the role from a `SessionStart` hook; setting
+   `disableAllHooks` in operator Claude settings removes it.
+4. Role changes apply to new sessions only.
 
 ## Daemon PID and listener disagree
 

@@ -4,8 +4,8 @@
 The authoritative source is [`paseo/source.toml`](../paseo/source.toml):
 
 - Official repository: `https://github.com/getpaseo/paseo.git`.
-- Stable release: [`v0.8.0`](https://github.com/getpaseo/paseo/releases/tag/v0.8.0), published 2026-09-10, not a draft or prerelease.
-- Commit: `b8e24677e12b226c7c38c1c3a40649daa9f1152f`.
+- Stable release: [`v0.9.2`](https://github.com/getpaseo/paseo/releases/tag/v0.9.2) (previously v0.8.0; the review evidence below refers to v0.8.0).
+- Commit: `c67b7158b441bb09026b38d86ae335cc4b49190a` (annotated tag object `0f75f6f913aa06bf48c4c72b94483c0dc571abee`).
 - Checkout: `~/projects/supervisors/paseo`, local branch `main`, only remote `origin`.
 
 ## Release selection

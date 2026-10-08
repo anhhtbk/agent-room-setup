@@ -42,7 +42,7 @@ class PaseoReleaseTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.git(self.target, "rev-parse", "HEAD"), self.release)
         self.assertEqual(self.git(self.target, "remote"), "origin")
-        self.assertEqual(self.git(self.target, "rev-parse", "v0.8.0^{commit}"), self.release)
+        self.assertEqual(self.git(self.target, "rev-parse", "v0.9.2^{commit}"), self.release)
 
     def test_transaction_restores_clean_official_checkout_to_release_tag(self):
         subprocess.run(["git", "clone", "-q", str(self.remote), str(self.target)], check=True)
@@ -70,23 +70,23 @@ class PaseoReleaseTests(unittest.TestCase):
         self.assertFalse((self.target / "post-release-change").exists())
 
     def test_annotated_release_tag_uses_peeled_commit(self):
-        self.git(self.remote, "tag", "-d", "v0.8.0")
+        self.git(self.remote, "tag", "-d", "v0.9.2")
         self.git(self.remote, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
-                 "tag", "-a", "v0.8.0", self.release, "-m", "Stable release")
+                 "tag", "-a", "v0.9.2", self.release, "-m", "Stable release")
         result = self.run_helper()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.git(self.target, "cat-file", "-t", "v0.8.0"), "tag")
+        self.assertEqual(self.git(self.target, "cat-file", "-t", "v0.9.2"), "tag")
         result = self.run_helper()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.git(self.target, "cat-file", "-t", "v0.8.0"), "tag")
+        self.assertEqual(self.git(self.target, "cat-file", "-t", "v0.9.2"), "tag")
 
     def test_missing_moved_or_prerelease_tag_fails_before_install(self):
-        for tag in ("v0.8.1", "v0.8.0-beta.1", "main"):
+        for tag in ("v0.8.1", "v0.9.2-beta.1", "main"):
             with self.subTest(tag=tag):
                 result = self.run_helper(PASEO_RELEASE_TAG=tag)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertFalse(self.target.exists())
-        self.git(self.remote, "tag", "-f", "v0.8.0", self.first)
+        self.git(self.remote, "tag", "-f", "v0.9.2", self.first)
         result = self.run_helper()
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(self.target.exists())
@@ -189,7 +189,7 @@ class PaseoReleaseTests(unittest.TestCase):
             file.write_text(file.read_text().replace(OLD_FORK, fork))
         manifest = copy / "paseo/source.toml"
         manifest.write_text(manifest.read_text().replace(
-            "b8e24677e12b226c7c38c1c3a40649daa9f1152f", self.release))
+            "c67b7158b441bb09026b38d86ae335cc4b49190a", self.release))
         before = lifecycle.tree_snapshot(self.target)
         env = {**self.env, **lifecycle.lifecycle_env(helper, lifecycle.make_fake_verifier()),
                "VERIFY_FAIL": "1"}
@@ -214,7 +214,7 @@ class PaseoReleaseTests(unittest.TestCase):
 set -eu
 if [ "${1:-}" = ls-remote ]; then
   "$REAL_GIT" "$@"
-  "$REAL_GIT" -C "$TEST_REMOTE" update-ref refs/tags/v0.8.0 "$TEST_FIRST"
+  "$REAL_GIT" -C "$TEST_REMOTE" update-ref refs/tags/v0.9.2 "$TEST_FIRST"
 else
   exec "$REAL_GIT" "$@"
 fi

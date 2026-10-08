@@ -45,6 +45,16 @@ for resource in config.toml auth.json AGENTS.md hooks.json skills plugins; do
   fi
 done
 
+# Claude Code and omp are optional: their Room providers stay unavailable until installed.
+for command_name in claude omp; do
+  if command -v "$command_name" >/dev/null 2>&1; then
+    log "OK    $(printf '%-12s' "$command_name") $("$command_name" --version 2>/dev/null | head -n 1)"
+  else
+    log "WARN  $(printf '%-12s' "$command_name") missing; $command_name-* Room providers stay unavailable"
+    warnings=$((warnings + 1))
+  fi
+done
+
 case ":$PATH:" in
   *":$HOME/.local/bin:"*) log "OK    PATH         ~/.local/bin" ;;
   *)

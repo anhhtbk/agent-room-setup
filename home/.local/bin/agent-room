@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+"""Launch Claude Code or oh-my-pi as a Codex Room role.
+
+Paseo starts a derived provider as ``agent-room <runtime> <role> <provider args...>``.
+The role contract is the ``developer_instructions`` block of the same overlay
+used by ``codex-room``, so every runtime reads one source of role authority.
+
+Unlike Codex, neither runtime gets a relocated home: relocating
+``CLAUDE_CONFIG_DIR`` or the omp agent directory would also relocate the
+operator's login. Role policy is applied per process instead:
+
+* Claude Code: a ``SessionStart`` hook (merged into any host ``--settings``)
+  injects the role on startup, resume, clear, and compaction. The Agent SDK
+  delivers its own system-prompt append over the control channel, which
+  replaces an argv ``--append-system-prompt``, so argv cannot carry the role.
+* omp: the role is merged into ``--append-system-prompt`` (last value wins, so
+  the host's value is folded in rather than overridden).
+* Native subagents are disabled (Claude ``Agent``/``Workflow`` tools; omp ``task``
+  tool via a config overlay) so delegation goes through Paseo roles.
+
+Probe and subcommand invocations (``--version``, ``auth status``, ...) run
+unchanged.
+"""
+
+import json
+import os
+import pathlib
+import shlex
+import shutil
+import sys
+import tomllib
+
+
+RUNTIMES = ("claude", "omp")
+ROLES = ("supervisor", "lead", "peer")
+SESSION_START_MODE = "--claude-session-start"
+APPEND_FLAG = "--append-system-prompt"
+SETTINGS_FLAG = "--settings"
+CLAUDE_DISALLOWED_FLAGS = ("--disallowedTools", "--disallowed-tools")
+# Agent spawns subagents; Workflow fans out background agents.
+CLAUDE_SUBAGENT_TOOLS = ("Agent", "Workflow")
+OMP_OVERLAY = "omp-room.config.yml"
+PROBE_ARGS = {"--version", "-v", "-V", "--help", "-h"}
+USAGE = f"usage: agent-room <{'|'.join(RUNTIMES)}> <{'|'.join(ROLES)}> [runtime args...]"
+
+
+def room_config_home() -> pathlib.Path:
+    configured = os.environ.get("CODEX_ROOM_CONFIG_HOME")
+    if configured:
+        return pathlib.Path(configured).expanduser()
+    return pathlib.Path.home() / ".config" / "codex-room"
+
+
+def role_instructions(role: str) -> str:
+    overlay = room_config_home() / "overlays" / f"{role}.config.toml"
+    try:
+        with overlay.open("rb") as stream:
+            document = tomllib.load(stream)
+    except (OSError, tomllib.TOMLDecodeError) as error:
+        raise SystemExit(f"cannot read role overlay {overlay}: {error}")
+    instructions = document.get("developer_instructions")
+    if not isinstance(instructions, str) or not instructions.strip():
+        raise SystemExit(f"role overlay has no developer_instructions: {overlay}")
+    return instructions.strip()
+
+
+def is_session(args: list[str]) -> bool:
+    """Sessions start with no args or a flag; probes and subcommands do not."""
+    if not args:
+        return True
+    return args[0].startswith("-") and args[0] not in PROBE_ARGS
+
+
+def take_flag(args: list[str], names: tuple[str, ...]) -> tuple[list[str], list[str]]:
+    """Remove every ``--name value`` / ``--name=value`` and return (rest, values)."""
+    rest: list[str] = []
+    values: list[str] = []
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        name, separator, inline = arg.partition("=")
+        if name in names and separator:
+            values.append(inline)
+        elif arg in names:
+            if index + 1 >= len(args):
+                raise SystemExit(f"{arg} requires a value")
+            values.append(args[index + 1])
+            index += 1
+        else:
+            rest.append(arg)
+        index += 1
+    return rest, values
+
+
+def host_settings(values: list[str]) -> dict:
+    """Load the last host ``--settings`` value (inline JSON or a file path)."""
+    if not values:
+        return {}
+    value = values[-1]
+    text = value if value.lstrip().startswith("{") else pathlib.Path(value).read_text()
+    settings = json.loads(text)
+    if not isinstance(settings, dict):
+        raise SystemExit("--settings must be a JSON object")
+    return settings
+
+
+def claude_args(args: list[str], role: str) -> list[str]:
+    role_instructions(role)  # fail before exec when the role contract is unreadable
+    args, settings_values = take_flag(args, (SETTINGS_FLAG,))
+    settings = host_settings(settings_values)
+    hook = shlex.join([str(pathlib.Path(__file__).resolve()), SESSION_START_MODE, role])
+    hooks = settings.setdefault("hooks", {})
+    hooks.setdefault("SessionStart", []).append({"hooks": [{"type": "command", "command": hook}]})
+
+    args, denied = take_flag(args, CLAUDE_DISALLOWED_FLAGS)
+    tools = [tool for value in denied for tool in value.split(",") if tool]
+    tools += [tool for tool in CLAUDE_SUBAGENT_TOOLS if tool not in tools]
+    return [
+        SETTINGS_FLAG, json.dumps(settings, separators=(",", ":")),
+        CLAUDE_DISALLOWED_FLAGS[0], ",".join(tools),
+        *args,
+    ]
+
+
+def omp_args(args: list[str], role: str) -> list[str]:
+    overlay = room_config_home() / OMP_OVERLAY
+    if not overlay.is_file():
+        raise SystemExit(f"omp room overlay is missing: {overlay}")
+    role_text = role_instructions(role)
+    args, prompts = take_flag(args, (APPEND_FLAG,))
+    prompt = role_text
+    if prompts:
+        # omp accepts text or a file path here; resolve before merging.
+        host = prompts[-1]
+        if os.path.isfile(host):
+            host = pathlib.Path(host).read_text()
+        if host.strip():
+            prompt = f"{role_text}\n\n{host}"
+    return ["--config", str(overlay), APPEND_FLAG, prompt, *args]
+
+
+def claude_session_start(role: str) -> None:
+    """Claude Code SessionStart hook: emit the role as session context."""
+    sys.stdin.read()
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "SessionStart",
+            "additionalContext": role_instructions(role),
+        }
+    }))
+
+
+def main() -> None:
+    if len(sys.argv) < 3:
+        raise SystemExit(USAGE)
+    first, role, args = sys.argv[1], sys.argv[2], sys.argv[3:]
+    if role not in ROLES:
+        raise SystemExit(f"unknown role: {role}\n{USAGE}")
+    if first == SESSION_START_MODE and not args:
+        claude_session_start(role)
+        return
+    if first not in RUNTIMES:
+        raise SystemExit(f"unknown runtime: {first}\n{USAGE}")
+
+    env_name = "CLAUDE_BIN" if first == "claude" else "OMP_BIN"
+    binary = os.environ.get(env_name) or shutil.which(first)
+    if not binary:
+        raise SystemExit(f"{first} not found; install it or set {env_name}")
+
+    if is_session(args):
+        args = claude_args(args, role) if first == "claude" else omp_args(args, role)
+    os.execv(binary, [binary, *args])
+
+
+if __name__ == "__main__":
+    main()

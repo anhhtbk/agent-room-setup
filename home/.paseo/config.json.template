@@ -90,24 +90,24 @@
         },
         "models": [
           {
-            "id": "gpt-6-astra",
-            "label": "Astra Low",
-            "isDefault": true,
-            "thinkingOptions": [
-              {
-                "id": "low",
-                "label": "Low",
-                "isDefault": true
-              }
-            ]
-          },
-          {
             "id": "gpt-5.6-sol",
             "label": "Sol Medium",
             "thinkingOptions": [
               {
                 "id": "medium",
                 "label": "Medium",
+                "isDefault": true
+              }
+            ],
+            "isDefault": true
+          },
+          {
+            "id": "gpt-6-astra",
+            "label": "Astra Low",
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low",
                 "isDefault": true
               }
             ]
@@ -187,20 +187,20 @@
         },
         "models": [
           {
-            "id": "gpt-6-astra",
-            "label": "Astra Medium",
-            "isDefault": true,
+            "id": "gpt-5.6-sol",
+            "label": "Sol Medium",
             "thinkingOptions": [
               {
                 "id": "medium",
                 "label": "Medium",
                 "isDefault": true
               }
-            ]
+            ],
+            "isDefault": true
           },
           {
-            "id": "gpt-5.6-sol",
-            "label": "Sol Medium",
+            "id": "gpt-6-astra",
+            "label": "Astra Medium",
             "thinkingOptions": [
               {
                 "id": "medium",
@@ -212,6 +212,84 @@
         ],
         "paseoTools": {
           "enabled": true
+        }
+      },
+      "claude-supervisor": {
+        "extends": "claude",
+        "label": "Claude Supervisor",
+        "description": "Portfolio governance seat on Claude Code with the Room role contract",
+        "command": [
+          "@@HOME@@/.local/bin/agent-room",
+          "claude",
+          "supervisor"
+        ],
+        "paseoTools": {
+          "enabled": true
+        }
+      },
+      "claude-lead": {
+        "extends": "claude",
+        "label": "Claude Lead",
+        "description": "Project technical authority on Claude Code with the Room role contract",
+        "command": [
+          "@@HOME@@/.local/bin/agent-room",
+          "claude",
+          "lead"
+        ],
+        "paseoTools": {
+          "enabled": true
+        }
+      },
+      "claude-peer": {
+        "extends": "claude",
+        "label": "Claude Peer",
+        "description": "Bounded engineering seat on Claude Code without Paseo orchestration tools",
+        "command": [
+          "@@HOME@@/.local/bin/agent-room",
+          "claude",
+          "peer"
+        ],
+        "paseoTools": {
+          "enabled": false
+        }
+      },
+      "omp-supervisor": {
+        "extends": "omp",
+        "label": "OMP Supervisor",
+        "description": "Portfolio governance seat on oh-my-pi with the Room role contract",
+        "command": [
+          "@@HOME@@/.local/bin/agent-room",
+          "omp",
+          "supervisor"
+        ],
+        "paseoTools": {
+          "enabled": true
+        }
+      },
+      "omp-lead": {
+        "extends": "omp",
+        "label": "OMP Lead",
+        "description": "Project technical authority on oh-my-pi with the Room role contract",
+        "command": [
+          "@@HOME@@/.local/bin/agent-room",
+          "omp",
+          "lead"
+        ],
+        "paseoTools": {
+          "enabled": true
+        }
+      },
+      "omp-peer": {
+        "extends": "omp",
+        "label": "OMP Peer",
+        "description": "Bounded engineering seat on oh-my-pi without Paseo orchestration tools",
+        "command": [
+          "@@HOME@@/.local/bin/agent-room",
+          "omp",
+          "peer"
+        ],
+        "paseoTools": {
+          "enabled": false
         }
       },
       "claude": {

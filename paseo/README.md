@@ -5,8 +5,8 @@ Room setup builds the official Paseo stable release selected in `source.toml`:
 ```text
 origin:   https://github.com/getpaseo/paseo.git
 checkout: ~/projects/supervisors/paseo
-release:  v0.8.0
-commit:   b8e24677e12b226c7c38c1c3a40649daa9f1152f
+release:  v0.9.2
+commit:   c67b7158b441bb09026b38d86ae335cc4b49190a
 ```
 
 Install/update follows this tag and commit, never the latest main or beta.

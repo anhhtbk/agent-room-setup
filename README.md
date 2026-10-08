@@ -1,16 +1,22 @@
 # Codex Room Setup
 
-Reproducible configuration for a three-role Codex room running through an official Paseo stable release:
+Reproducible configuration for a three-role room (Supervisor, Lead, Peer)
+running through an official Paseo stable release. Each role is offered on three
+runtimes: Codex, Claude Code, and oh-my-pi (omp).
 
 ```text
-Paseo provider
-  -> codex-room <supervisor|lead|peer>
+Paseo provider codex-<role>
+  -> codex-room <role>
   -> codex-room-sync
   -> isolated ~/.codex-runtime/<role>
   -> Codex app-server
+
+Paseo provider claude-<role> | omp-<role>
+  -> agent-room <claude|omp> <role>
+  -> operator's own claude / omp, plus role instructions and policy
 ```
 
-This repository deliberately does **not** own `~/.codex`. Each operator installs and authenticates Codex independently. The sync script reads the operator's existing `~/.codex/config.toml` as its base and shares their auth, skills, plugins, and global `AGENTS.md` by symlink. Hooks are shared only when `hooks.json` exists.
+This repository deliberately does **not** own `~/.codex`, `~/.claude`, or `~/.omp`. Each operator installs and authenticates each runtime independently. The Codex sync reads the operator's existing `~/.codex/config.toml` as its base and shares their auth, skills, plugins, and global `AGENTS.md` by symlink. Hooks are shared only when `hooks.json` exists. Claude Code and omp run with the operator's own home and login; `agent-room` adds the role per process (see [Claude Code and omp roles](#claude-code-and-omp-roles)).
 
 ## What gets installed
 
@@ -19,7 +25,7 @@ The `home/` directory mirrors `$HOME`:
 | Repository source | Local destination |
 | --- | --- |
 | `home/.config/codex-room/` | `~/.config/codex-room/` |
-| `home/.local/bin/codex-room*` | `~/.local/bin/` |
+| `home/.local/bin/codex-room*`, `home/.local/bin/agent-room` | `~/.local/bin/` |
 | `home/.paseo/config.json.template` | `~/.paseo/config.json` |
 
 The public installer creates this checkout-aware symlink:
@@ -42,6 +48,9 @@ Prerequisites:
   sharing. `hooks.json` is optional: an existing file is shared, while an
   absent file is skipped without creating anything in the operator home.
 - `~/.local/bin` on `PATH`.
+- Optional: Claude Code (`claude`) and/or oh-my-pi (`omp`, 16.3.9 or newer)
+  installed and logged in. Their `claude-*`/`omp-*` providers stay unavailable
+  in Paseo until the runtime is on the daemon's PATH.
 
 ```bash
 git clone https://github.com/hoangnb24/codex-room-setup.git codex-room-setup
@@ -96,7 +105,7 @@ repeatability, preservation, and real Paseo daemon startup with a provider RPC.
 Authenticated Codex sessions, Paseo Desktop/GUI behavior, and macOS
 signing/TCC/application restart remain operator checks.
 
-The Paseo source manifest pins official stable release **v0.8.0** and its immutable commit.
+The Paseo source manifest pins official stable release **v0.9.2** and its immutable commit.
 It never installs a daily main build or beta. See [release selection and fork migration](docs/paseo-release.md). The public installer
 preflights Paseo in a disposable location before changing live state. Paseo uses
 `npm ci` and refuses custom Git hooks because its audited `prepare` lifecycle
@@ -137,7 +146,7 @@ restarts Paseo.
 
 ## Roles
 
-| Role | Default model | Reasoning | Paseo MCP injection |
+| Role | Codex overlay model | Reasoning | Paseo MCP injection (all runtimes) |
 | --- | --- | --- | --- |
 | Supervisor | `gpt-5.6-sol` | medium | yes |
 | Lead | `gpt-5.6-sol` | medium | yes |
@@ -147,9 +156,44 @@ Supervisor routes Human intent and bounded recovery. Lead owns technical
 framing, dependency order, verification, and explicit candidate acceptance.
 Peer owns one bounded outcome and returns an immutable candidate or a concrete
 block signal. Lead may request a fresh read-only Peer review when independent
-judgment can change a technical decision. All role overlays currently request
-`danger-full-access` with `approval_policy = "never"`. Read
+judgment can change a technical decision. All Codex role overlays currently
+request `danger-full-access` with `approval_policy = "never"`. Read
 [docs/architecture.md](docs/architecture.md) before changing these boundaries.
+
+Writable Peers may commit their own files on the current branch unless Human
+forbids it, and at most three run in parallel with disjoint write scopes.
+
+### Running a spec folder
+
+Give Lead a folder with `spec.md` and `issues/NN-<slug>.md`. Lead then follows
+`~/.config/codex-room/skills/spec-orchestration/SKILL.md`: it does not edit
+code, schedules tickets whose blockers are done and whose `Touches:` are
+disjoint (`frontier.py`, up to three Peers), dispatches each attempt to a fresh
+`*-peer` agent with a brief, reviews the Peer's commits by SHA against its gate
+logs, and records `Status:`/`Commits:` in the ticket. Run state lives in
+`<spec>/.room/`. `tree-audit.py` detects branch switches, resets, rebases,
+amends, stash, pushes, and edits to files Human had dirty; it reports after the
+fact rather than blocking the command.
+
+## Claude Code and omp roles
+
+`claude-supervisor|lead|peer` and `omp-supervisor|lead|peer` extend Paseo's
+built-in Claude Code and omp adapters and launch
+`~/.local/bin/agent-room <runtime> <role>`. The launcher reads the same
+`developer_instructions` as the Codex role overlay, so role authority has one
+source, and then execs the operator's `claude` or `omp`:
+
+| | Claude Code | omp |
+| --- | --- | --- |
+| Role instructions | `SessionStart` hook merged into `--settings` (re-injected after compaction) | merged into the single `--append-system-prompt` |
+| Native subagents | `--disallowedTools Agent,Workflow` | `--config ~/.config/codex-room/omp-room.config.yml` (`task.maxRecursionDepth: 0`) |
+| Paseo tools | Supervisor/Lead only (MCP) | Supervisor/Lead only (native host tools) |
+| Home and login | operator `~/.claude` | operator `~/.omp` |
+
+Models, thinking, and permission mode come from the Paseo agent settings; the
+Codex-only overlay keys do not apply. `agent-room claude lead` also works from a
+terminal for an interactive role session. See
+[docs/architecture.md](docs/architecture.md) for why no per-role home is created.
 
 ## Common operations
 

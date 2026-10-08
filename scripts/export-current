@@ -8,11 +8,13 @@ require_command python3
 require_command jq
 
 jq -e '
-  ([.agents.providers | keys[] | select(startswith("codex-"))] | sort) ==
-    ["codex-lead", "codex-peer", "codex-supervisor"] and
+  ([.agents.providers | keys[] | select(test("^(codex|claude|omp)-"))] | sort) ==
+    ["claude-lead", "claude-peer", "claude-supervisor",
+     "codex-lead", "codex-peer", "codex-supervisor",
+     "omp-lead", "omp-peer", "omp-supervisor"] and
   .daemon.mcp.injectIntoAgents == true
 ' "$HOME/.paseo/config.json" >/dev/null ||
-  die "installed Paseo config does not have the exact three-role contract"
+  die "installed Paseo config does not have the exact three-role contract per runtime"
 
 jq -e -f "$REPO_ROOT/scripts/lib/paseo-tools.jq" "$HOME/.paseo/config.json" >/dev/null || die "unexpected Paseo tool policy"
 
@@ -39,7 +41,11 @@ done
 for name in WORKSPACE_PROTOCOL.md; do
   export_one "$HOME/.config/codex-room/workflow/$name" "$REPO_ROOT/home/.config/codex-room/workflow/$name"
 done
-for name in codex-room codex-room-sync paseo-local-update; do
+export_one "$HOME/.config/codex-room/omp-room.config.yml" "$REPO_ROOT/home/.config/codex-room/omp-room.config.yml"
+for name in SKILL.md reference.md questions.md brief-template.md scripts/frontier.py scripts/ticket-field.py scripts/tree-audit.py; do
+  export_one "$HOME/.config/codex-room/skills/spec-orchestration/$name" "$REPO_ROOT/home/.config/codex-room/skills/spec-orchestration/$name"
+done
+for name in codex-room codex-room-sync agent-room paseo-local-update; do
   export_one "$HOME/.local/bin/$name" "$REPO_ROOT/home/.local/bin/$name"
 done
 export_one "$HOME/.paseo/config.json" "$REPO_ROOT/home/.paseo/config.json.template"
