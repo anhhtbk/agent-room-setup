@@ -160,20 +160,26 @@ judgment can change a technical decision. All Codex role overlays currently
 request `danger-full-access` with `approval_policy = "never"`. Read
 [docs/architecture.md](docs/architecture.md) before changing these boundaries.
 
-Writable Peers may commit their own files on the current branch unless Human
-forbids it, and at most three run in parallel with disjoint write scopes.
+Writable Peers may commit their own files on the branch Lead assigned unless
+Human forbids it, and at most three run in parallel with disjoint write scopes.
 
-### Running a spec folder
+### Running a spec
 
-Give Lead a folder with `spec.md` and `issues/NN-<slug>.md`. Lead then follows
-`~/.config/codex-room/skills/spec-orchestration/SKILL.md`: it does not edit
-code, schedules tickets whose blockers are done and whose `Touches:` are
-disjoint (`frontier.py`, up to three Peers), dispatches each attempt to a fresh
-`*-peer` agent with a brief, reviews the Peer's commits by SHA against its gate
-logs, and records `Status:`/`Commits:` in the ticket. Run state lives in
-`<spec>/.room/`. `tree-audit.py` detects branch switches, resets, rebases,
-amends, stash, pushes, and edits to files Human had dirty; it reports after the
-fact rather than blocking the command.
+Give Lead a spec with tickets. Lead follows the operator's global skill
+`~/.agents/skills/implement-spec/SKILL.md` (not copied into this repository)
+with the Room mapping in `~/.config/codex-room/workflow/IMPLEMENT_SPEC.md`:
+implementer Peers each work in a Lead-created worktree and branch per
+repository, merger Peers merge them into a local integration branch per
+repository, Lead coordinates `code-review` with two read-only axis Peers per
+repository, and
+Lead dispositions every response. Push, PRs, merges into
+the base branch, and deployment stay Human decisions.
+
+Room tools in `~/.config/codex-room/tools/`: `tree-audit.py` reports branch
+switches, resets, stash, pushes, and edits to files Human had dirty in the
+main checkout; `worktree-guard.py` removes a worktree only when its content
+equals the writer's handoff baseline; `run-procs.py` runs commands in a
+run-owned process group and stops only that group.
 
 ## Claude Code and omp roles
 

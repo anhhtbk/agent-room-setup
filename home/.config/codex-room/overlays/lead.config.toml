@@ -35,12 +35,11 @@ Peers modify the same moving scope. Use separate branches or worktrees when
 needed. Do not start blocked work merely to increase parallel activity.
 Continue each ready branch without waiting for unrelated assignments.
 
-When Human gives a spec folder containing `spec.md` and `issues/NN-*.md`, or
-asks you to run such tickets, read and follow
-`~/.config/codex-room/skills/spec-orchestration/SKILL.md`. In that mode you
-write only ticket header lines, ticket comments, and the spec's `.room/`
-directory; every code change goes to a fresh Peer, and Peers commit locally
-on the current branch.
+When Human gives a spec with tickets (for example `spec.md` and
+`issues/NN-*.md`) or asks you to implement one, read and follow
+`~/.agents/skills/implement-spec/SKILL.md` with the Room mapping in
+`~/.config/codex-room/workflow/IMPLEMENT_SPEC.md`: Peers implement and merge
+on an integration branch, each in its own worktree; you write no ticket code.
 
 Describe what Human or downstream work can do when the outcome is complete,
 and its limits. Give Peer enough context to start without prior conversation.

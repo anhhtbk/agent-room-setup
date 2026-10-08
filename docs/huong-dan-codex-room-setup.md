@@ -35,8 +35,9 @@ nhận Paseo tools; Peer không nhận công cụ điều phối.
 
 Lead chạy tối đa 3 Peer ghi song song, và chỉ khi mỗi Peer có input đã được
 chấp nhận và write scope (Touches) riêng, không giao nhau; nếu không thì làm
-tuần tự. Peer được commit file của mình trên branch hiện tại (không push,
-merge hay deploy) trừ khi Human cấm commit. Peer có
+tuần tự. Peer được commit file của mình trên branch Lead giao, và merge vào
+integration branch local khi Lead giao (không push, merge vào base hay deploy)
+trừ khi Human cấm commit. Peer có
 thể gửi `REOPEN_REQUEST` khi tiền đề kỹ thuật thất bại,
 `DEPENDENCY_REQUEST` khi thiếu prerequisite chưa có owner, hoặc `BLOCKED` khi
 không còn bước an toàn trong phạm vi. Mỗi tín hiệu cần nêu bằng chứng, hệ quả,
@@ -46,31 +47,31 @@ Khi một quyết định kiến trúc hoặc candidate có rủi ro đủ lớn
 một Peer mới ở chế độ chỉ đọc để xem đúng candidate hoặc snapshot đã cố định.
 Đây vẫn là Peer theo nhiệm vụ, không tạo thêm provider hay cấp bậc mới.
 
-## Chạy ticket theo spec (spec-orchestration)
+## Chạy spec (implement-spec)
 
-Khi Human giao cho Lead một thư mục spec có `spec.md` và `issues/NN-*.md`, Lead
-làm theo `~/.config/codex-room/skills/spec-orchestration/SKILL.md`:
+Khi Human giao cho Lead một spec có ticket, Lead làm theo skill global
+`~/.agents/skills/implement-spec/SKILL.md` (không copy vào repo này hay vào
+project) cùng bảng ánh xạ Room ở `~/.config/codex-room/workflow/IMPLEMENT_SPEC.md`:
 
-- Lead không sửa code. Lead chỉ ghi header và `## Comments` của ticket, cùng
-  thư mục `<SPEC>/.room/` (baseline, brief, report, review, câu hỏi).
-- `frontier.py` chọn ticket sẵn sàng: blocker đã xong, `Touches` không giao
-  ticket đang chạy; tối đa 3 Peer cùng lúc trên cùng branch.
-- Mỗi ticket (và mỗi lượt sửa lại) giao cho một Peer mới qua công cụ Paseo,
-  mặc định cùng runtime với Lead (`claude-lead` → `claude-peer`), hoặc theo
-  dòng `Runtime:` của ticket.
-- Peer commit bằng pathspec trong lock, lưu log gate và ghi `report.md` với
-  `SIGNAL: CANDIDATE | REOPEN_REQUEST | DEPENDENCY_REQUEST | BLOCKED`.
-- Lead review theo SHA, kiểm log gate thay vì chạy lại test, rồi ACCEPT/REJECT.
-- Không dùng hook chặn lệnh git. `tree-audit.py` phát hiện đổi branch, reset,
-  rebase, amend, stash, push, và thay đổi trên file Human đang sửa dở, cho cả
-  ba runtime. Nó phát hiện sau khi xảy ra, không ngăn trước: `reset --hard` hay
-  `clean` vẫn có thể làm mất thay đổi chưa commit của Peer khác.
+- Lead tạo integration branch và worktree; mỗi ticket có worktree/branch riêng
+  do Lead tạo rồi adopt thành Paseo workspace `local`. Checkout chính của
+  project không bị checkout, reset, stash hay clean.
+- Implementer, merger, exploration và review là Peer tạo qua công cụ Paseo
+  (tối đa 3 Peer ghi cùng lúc); merger merge vào integration branch local.
+  Lead không viết code ticket và disposition mọi phản hồi của Peer.
+- Push, PR, merge vào base branch và deploy chỉ khi Human yêu cầu; skill không
+  tự cấp quyền reset/stash/clean trên thay đổi đang dở.
+- Tool trong `~/.config/codex-room/tools/`: `tree-audit.py` phát hiện sau sự
+  việc đổi branch, reset, stash, push và sửa file Human đang dở ở checkout
+  chính; `worktree-guard.py` chỉ xóa worktree khi nội dung khớp baseline do
+  chính writer ghi lúc bàn giao (`--head` = candidate SHA, `--digest` trong
+  disposition); `run-procs.py` chạy lệnh trong process group của run và chỉ
+  dừng group đó.
 - Câu hỏi kỹ thuật Lead tự trả lời; câu hỏi nghiệp vụ Lead hỏi Human trong chat
   và chỉ tiếp tục các ticket độc lập với câu hỏi.
 
-Skill này độc lập với skill `orchestrate` của từng project (ví dụ bản herdr
-trong PMS): khác tên, khác thư mục chạy (`.room/` thay vì `.orch/`), và chỉ được
-nạp khi Lead chạy trong Paseo.
+Luồng này độc lập với skill `orchestrate` của từng project (ví dụ bản herdr
+trong PMS) và chỉ được nạp khi Lead chạy trong Paseo.
 
 ## Cài đặt và sinh runtime
 

@@ -1652,11 +1652,11 @@ class AgentRoomLauncherTests(unittest.TestCase):
         self.assertFalse(self.log.exists())
 
 
-SPEC_SCRIPTS = ROOM / "skills" / "spec-orchestration" / "scripts"
+ROOM_TOOLS = ROOM / "tools"
 
 
-class SpecOrchestrationScriptTests(unittest.TestCase):
-    """Behavior of the Lead's spec-orchestration helper scripts."""
+class TreeAuditToolTests(unittest.TestCase):
+    """Behavior of the tree-audit room tool on a main checkout."""
 
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -1664,44 +1664,13 @@ class SpecOrchestrationScriptTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
 
     def script(self, name: str, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run([sys.executable, str(SPEC_SCRIPTS / name), *args], capture_output=True, text=True)
+        return subprocess.run([sys.executable, str(ROOM_TOOLS / name), *args], capture_output=True, text=True)
 
     def ticket(self, spec: Path, name: str, headers: str) -> Path:
         path = spec / "issues" / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(f"# {name}\n\n{headers}\n\n## What to build\n\n- [ ] first\n- [ ] second\n")
         return path
-
-    def test_frontier_respects_blockers_touches_and_running_conflicts(self) -> None:
-        spec = self.root / "spec"
-        self.ticket(spec, "01-done.md", "Status: done\nTouches: api:src/a/**")
-        self.ticket(spec, "02-ready.md", "Status: ready-for-agent\nBlocked by: 01\nTouches: api:src/b/**")
-        self.ticket(spec, "03-clash.md", "**Status:** ready-for-agent\n**Touches:** api:src/c/x.cs")
-        self.ticket(spec, "04-running.md", "Status: in-progress\nTouches: api:src/c/**")
-        self.ticket(spec, "05-untouched.md", "Status: todo")
-        self.ticket(spec, "06-waiting.md", "Status: ready-for-agent\nBlocked by: 02\nTouches: web:src/**")
-        self.ticket(spec, "07-other-repo.md", "Status: needs-fix\nTouches: web:src/c/**")
-        result = self.script("frontier.py", str(spec), "--running", "02")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        verdicts = {line.split("\t")[0]: line.split("\t")[-1] for line in result.stdout.splitlines()}
-        self.assertEqual(verdicts, {
-            "01": "", "02": "FRONTIER", "03": "CONFLICT:04", "04": "",
-            "05": "NEEDS-TOUCHES", "06": "", "07": "FRONTIER",
-        })
-
-    def test_ticket_field_edits_headers_comments_and_checkboxes(self) -> None:
-        path = self.ticket(self.root / "spec", "01-a.md", "**Status:** ready-for-agent\nRepo: api")
-        for args in (("Status", "in-progress"), ("Touches", "api:src/**"), ("--comment", "dispatched"),
-                     ("--tick", "second"), ("--comment", "reviewed")):
-            result = self.script("ticket-field.py", str(path), *args)
-            self.assertEqual(result.returncode, 0, result.stderr)
-        text = path.read_text()
-        head, _, body = text.partition("\n## What to build")
-        self.assertIn("**Status:** in-progress", head)
-        self.assertIn("Repo: api\nTouches: api:src/**", head)
-        self.assertIn("- [ ] first\n- [x] second", body)
-        comments = body.split("## Comments", 1)[1].strip().splitlines()
-        self.assertEqual([line.split(" ", 3)[3] for line in comments], ["dispatched", "reviewed"])
 
     def git(self, *args: str) -> str:
         return subprocess.run(
@@ -1735,7 +1704,8 @@ class SpecOrchestrationScriptTests(unittest.TestCase):
         self.git("add", "--", "peer.txt")
         self.git("commit", "-qm", "peer work", "--", "peer.txt")
         (self.repo / "running.txt").write_text("in progress\n")
-        self.script("ticket-field.py", str(self.repo / "spec/issues/01-a.md"), "Status", "done")
+        ticket = self.repo / "spec/issues/01-a.md"
+        ticket.write_text(ticket.read_text().replace("Status: ready-for-agent", "Status: done"))
         result = self.audit(baseline)
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("UNCOMMITTED", result.stdout)

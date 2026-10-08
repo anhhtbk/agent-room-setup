@@ -38,7 +38,8 @@ if [[ "$mode" == source ]]; then
   launcher_path="$REPO_ROOT/home/.local/bin/codex-room"
   agent_launcher_path="$REPO_ROOT/home/.local/bin/agent-room"
   omp_overlay_path="$REPO_ROOT/home/.config/codex-room/omp-room.config.yml"
-  skill_root="$REPO_ROOT/home/.config/codex-room/skills/spec-orchestration"
+  tools_root="$REPO_ROOT/home/.config/codex-room/tools"
+  spec_orchestration="$REPO_ROOT/home/.config/codex-room/skills/spec-orchestration"
   obsolete_paths=(
     "$overlays_root/review.config.toml"
     "$overlays_root/harness.config.toml"
@@ -55,7 +56,8 @@ else
   launcher_path="$HOME/.local/bin/codex-room"
   agent_launcher_path="$HOME/.local/bin/agent-room"
   omp_overlay_path="$HOME/.config/codex-room/omp-room.config.yml"
-  skill_root="$HOME/.config/codex-room/skills/spec-orchestration"
+  tools_root="$HOME/.config/codex-room/tools"
+  spec_orchestration="$HOME/.config/codex-room/skills/spec-orchestration"
   obsolete_paths=(
     "$overlays_root/review.config.toml"
     "$overlays_root/harness.config.toml"
@@ -65,6 +67,10 @@ else
     "$HOME/.local/bin/codex-review-apply"
   )
 fi
+for name in SKILL.md reference.md questions.md brief-template.md scripts/frontier.py \
+  scripts/ticket-field.py scripts/tree-audit.py scripts/worktree-guard.py scripts/run-procs.py; do
+  obsolete_paths+=("$spec_orchestration/$name")
+done
 
 check "Paseo config exists" test -f "$config_template"
 check "Paseo config is valid JSON" jq -e . "$config_template"
@@ -75,13 +81,12 @@ check "omp room overlay exists" test -f "$omp_overlay_path"
 check "omp room overlay removes native subagents" grep -Eq '^[[:space:]]+maxRecursionDepth: 0$' "$omp_overlay_path"
 check "workspace protocol exists" test -f "$workflow_root/WORKSPACE_PROTOCOL.md"
 check "Paseo provenance manifest exists" test -f "$REPO_ROOT/paseo/source.toml"
-for skill_file in SKILL.md reference.md questions.md brief-template.md; do
-  check "spec-orchestration $skill_file exists" test -f "$skill_root/$skill_file"
+check "implement-spec Room mapping exists" test -f "$workflow_root/IMPLEMENT_SPEC.md"
+for tool in tree-audit.py worktree-guard.py run-procs.py; do
+  check "room tool $tool is executable" test -x "$tools_root/$tool"
 done
-for skill_script in frontier.py ticket-field.py tree-audit.py; do
-  check "spec-orchestration $skill_script is executable" test -x "$skill_root/scripts/$skill_script"
-done
-check "Lead routes spec folders to spec-orchestration" grep -Fq "skills/spec-orchestration/SKILL.md" "$overlays_root/lead.config.toml"
+check "Lead routes specs to the global implement-spec skill" grep -Fq "~/.agents/skills/implement-spec/SKILL.md" "$overlays_root/lead.config.toml"
+check "Lead reads the Room implement-spec mapping" grep -Fq "workflow/IMPLEMENT_SPEC.md" "$overlays_root/lead.config.toml"
 check "writable Peers are capped at three" grep -Fq "three at once" "$workflow_root/WORKSPACE_PROTOCOL.md"
 
 for role in supervisor lead peer; do
@@ -109,6 +114,10 @@ preserved_obsolete_path() {
       expected_mode=700 ;;
     .config/codex-room/workflow/ANTI_PATTERNS.md|.config/codex-room/workflow/SUPERVISOR_NOTEBOOK.md)
       expected_mode=644 ;;
+    .config/codex-room/skills/spec-orchestration/*.md)
+      expected_mode=644 ;;
+    .config/codex-room/skills/spec-orchestration/scripts/*.py)
+      expected_mode=755 ;;
     *) return 1 ;;
   esac
   local actual_mode
@@ -144,6 +153,23 @@ PY
       [[ "$digest" != b25baaf4f632a41fb1761bc8ac7b14258b7afd011a27d2c71833d9b027109972 ]] ;;
     .config/codex-room/workflow/SUPERVISOR_NOTEBOOK.md)
       [[ "$digest" != d644212642909ba20c4960503f89ef74b4897e39cf4096f5c9c1df2c686d430f ]] ;;
+    .config/codex-room/skills/spec-orchestration/*)
+      ! grep -Fqx "$digest" <<'DIGESTS'
+db02670871fd7a8a59bc6d9acfbbb1e2284c6c159792b16308a286b39ca162b3
+723e0e0d83cb50913680e7f298b32b27002c2f88b367a9e34a3e9926675f7bda
+af6609862fe97acd46379dbe6fcf75b7f32f7f611a9cfe5485891adfae236ab9
+399f25233e51dcf60c9fc5ced9f3c4ad606e56c6f5535b2abf332c59ab727577
+59f874b00ef3a13355e1be5ef8d6cf52904b78ae73aabd0201ffb9727a26c402
+b5c66787efca419b3ebcb48303be70b0bd86a9e64ed9f95f0f5150650a9a63d1
+4a55915566396f96c4ade637e1e695725aaad74da0f34997b9c03933dab65321
+b60d355e823a55e80b131648a6b8035c4353e43e42efbb47f2613e5f6e566483
+418064ff2e7c004c322fc1853b3fbed4094011f2dd57ca108d0841f1917a5a26
+5e2447affbbbbc43137d37b7d9a2d2382cb4b6e0ca1d7d5eb17ccd50552b61b5
+42083c1bd80fb2a445df29daf513fdc24de9539f59f24a12e71e81b59595b626
+2b2d88f3bf24a0f422c69b9331a496fb92e4fef1c4c31e27bbdbdf75775f3dbd
+5a6b1e94294ceeaa201f3de6b0ff608fe0ad253922b153fdfb4d02b37cdd2149
+DIGESTS
+      ;;
     *) return 1 ;;
   esac
 }

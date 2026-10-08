@@ -40,6 +40,7 @@ ROLES = ("supervisor", "lead", "peer")
 # their immutable templates live in paseo/legacy so classification never needs
 # the repository's Git history. A customized file, private notebook, or
 # redirecting link is retained and called out in the plan/result.
+SPEC_ORCHESTRATION = ".config/codex-room/skills/spec-orchestration"
 OBSOLETE_HASHES = {
     ".config/codex-room/overlays/review.config.toml": {
         "bd6658ce6fbd53a6904e41752f31493fea77ae76b974cde881dc254b89aa9e94",
@@ -59,6 +60,39 @@ OBSOLETE_HASHES = {
     ".config/codex-room/workflow/SUPERVISOR_NOTEBOOK.md": {
         "d644212642909ba20c4960503f89ef74b4897e39cf4096f5c9c1df2c686d430f",
     },
+    # spec-orchestration was replaced by ~/.agents/skills/implement-spec with
+    # workflow/IMPLEMENT_SPEC.md; its helpers moved to tools/.
+    f"{SPEC_ORCHESTRATION}/SKILL.md": {
+        "db02670871fd7a8a59bc6d9acfbbb1e2284c6c159792b16308a286b39ca162b3",
+    },
+    f"{SPEC_ORCHESTRATION}/reference.md": {
+        "723e0e0d83cb50913680e7f298b32b27002c2f88b367a9e34a3e9926675f7bda",
+        "af6609862fe97acd46379dbe6fcf75b7f32f7f611a9cfe5485891adfae236ab9",
+    },
+    f"{SPEC_ORCHESTRATION}/questions.md": {
+        "399f25233e51dcf60c9fc5ced9f3c4ad606e56c6f5535b2abf332c59ab727577",
+    },
+    f"{SPEC_ORCHESTRATION}/brief-template.md": {
+        "59f874b00ef3a13355e1be5ef8d6cf52904b78ae73aabd0201ffb9727a26c402",
+        "b5c66787efca419b3ebcb48303be70b0bd86a9e64ed9f95f0f5150650a9a63d1",
+    },
+    f"{SPEC_ORCHESTRATION}/scripts/frontier.py": {
+        "4a55915566396f96c4ade637e1e695725aaad74da0f34997b9c03933dab65321",
+    },
+    f"{SPEC_ORCHESTRATION}/scripts/ticket-field.py": {
+        "b60d355e823a55e80b131648a6b8035c4353e43e42efbb47f2613e5f6e566483",
+    },
+    f"{SPEC_ORCHESTRATION}/scripts/tree-audit.py": {
+        "418064ff2e7c004c322fc1853b3fbed4094011f2dd57ca108d0841f1917a5a26",
+    },
+    f"{SPEC_ORCHESTRATION}/scripts/worktree-guard.py": {
+        "5e2447affbbbbc43137d37b7d9a2d2382cb4b6e0ca1d7d5eb17ccd50552b61b5",
+        "2b2d88f3bf24a0f422c69b9331a496fb92e4fef1c4c31e27bbdbdf75775f3dbd",
+    },
+    f"{SPEC_ORCHESTRATION}/scripts/run-procs.py": {
+        "42083c1bd80fb2a445df29daf513fdc24de9539f59f24a12e71e81b59595b626",
+        "5a6b1e94294ceeaa201f3de6b0ff608fe0ad253922b153fdfb4d02b37cdd2149",
+    },
 }
 OBSOLETE_TEMPLATES = {
     ".config/codex-room/paseo.phase2-coexist.candidate.json":
@@ -75,6 +109,9 @@ OBSOLETE_MODES = {
     ".local/bin/codex-review-apply": 0o700,
     ".config/codex-room/workflow/ANTI_PATTERNS.md": 0o644,
     ".config/codex-room/workflow/SUPERVISOR_NOTEBOOK.md": 0o644,
+    **{f"{SPEC_ORCHESTRATION}/{name}": 0o644 for name in ("SKILL.md", "reference.md", "questions.md", "brief-template.md")},
+    **{f"{SPEC_ORCHESTRATION}/scripts/{name}": 0o755 for name in (
+        "frontier.py", "ticket-field.py", "tree-audit.py", "worktree-guard.py", "run-procs.py")},
 }
 
 MANAGED_FILES = (
@@ -84,13 +121,10 @@ MANAGED_FILES = (
     (".config/codex-room/overlays/peer.config.toml", ".config/codex-room/overlays/peer.config.toml", 0o600),
     (".config/codex-room/workflow/WORKSPACE_PROTOCOL.md", ".config/codex-room/workflow/WORKSPACE_PROTOCOL.md", 0o644),
     (".config/codex-room/omp-room.config.yml", ".config/codex-room/omp-room.config.yml", 0o644),
-    (".config/codex-room/skills/spec-orchestration/SKILL.md", ".config/codex-room/skills/spec-orchestration/SKILL.md", 0o644),
-    (".config/codex-room/skills/spec-orchestration/reference.md", ".config/codex-room/skills/spec-orchestration/reference.md", 0o644),
-    (".config/codex-room/skills/spec-orchestration/questions.md", ".config/codex-room/skills/spec-orchestration/questions.md", 0o644),
-    (".config/codex-room/skills/spec-orchestration/brief-template.md", ".config/codex-room/skills/spec-orchestration/brief-template.md", 0o644),
-    (".config/codex-room/skills/spec-orchestration/scripts/frontier.py", ".config/codex-room/skills/spec-orchestration/scripts/frontier.py", 0o755),
-    (".config/codex-room/skills/spec-orchestration/scripts/ticket-field.py", ".config/codex-room/skills/spec-orchestration/scripts/ticket-field.py", 0o755),
-    (".config/codex-room/skills/spec-orchestration/scripts/tree-audit.py", ".config/codex-room/skills/spec-orchestration/scripts/tree-audit.py", 0o755),
+    (".config/codex-room/workflow/IMPLEMENT_SPEC.md", ".config/codex-room/workflow/IMPLEMENT_SPEC.md", 0o644),
+    (".config/codex-room/tools/tree-audit.py", ".config/codex-room/tools/tree-audit.py", 0o755),
+    (".config/codex-room/tools/worktree-guard.py", ".config/codex-room/tools/worktree-guard.py", 0o755),
+    (".config/codex-room/tools/run-procs.py", ".config/codex-room/tools/run-procs.py", 0o755),
     (".local/bin/codex-room", ".local/bin/codex-room", 0o755),
     (".local/bin/codex-room-sync", ".local/bin/codex-room-sync", 0o755),
     (".local/bin/agent-room", ".local/bin/agent-room", 0o755),

@@ -50,13 +50,10 @@ done <<'EOF'
 .config/codex-room/overlays/peer.config.toml|.config/codex-room/overlays/peer.config.toml
 .config/codex-room/workflow/WORKSPACE_PROTOCOL.md|.config/codex-room/workflow/WORKSPACE_PROTOCOL.md
 .config/codex-room/omp-room.config.yml|.config/codex-room/omp-room.config.yml
-.config/codex-room/skills/spec-orchestration/SKILL.md|.config/codex-room/skills/spec-orchestration/SKILL.md
-.config/codex-room/skills/spec-orchestration/reference.md|.config/codex-room/skills/spec-orchestration/reference.md
-.config/codex-room/skills/spec-orchestration/questions.md|.config/codex-room/skills/spec-orchestration/questions.md
-.config/codex-room/skills/spec-orchestration/brief-template.md|.config/codex-room/skills/spec-orchestration/brief-template.md
-.config/codex-room/skills/spec-orchestration/scripts/frontier.py|.config/codex-room/skills/spec-orchestration/scripts/frontier.py
-.config/codex-room/skills/spec-orchestration/scripts/ticket-field.py|.config/codex-room/skills/spec-orchestration/scripts/ticket-field.py
-.config/codex-room/skills/spec-orchestration/scripts/tree-audit.py|.config/codex-room/skills/spec-orchestration/scripts/tree-audit.py
+.config/codex-room/workflow/IMPLEMENT_SPEC.md|.config/codex-room/workflow/IMPLEMENT_SPEC.md
+.config/codex-room/tools/tree-audit.py|.config/codex-room/tools/tree-audit.py
+.config/codex-room/tools/worktree-guard.py|.config/codex-room/tools/worktree-guard.py
+.config/codex-room/tools/run-procs.py|.config/codex-room/tools/run-procs.py
 .local/bin/codex-room|.local/bin/codex-room
 .local/bin/codex-room-sync|.local/bin/codex-room-sync
 .local/bin/agent-room|.local/bin/agent-room

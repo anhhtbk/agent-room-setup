@@ -84,6 +84,36 @@ retire_obsolete() {
   log "RETIRED    ~/$relative_target"
 }
 
+# spec-orchestration files are retired only when their bytes match a version
+# this repository or this cutover published; customized copies are kept.
+SPEC_ORCHESTRATION_DIGESTS="
+db02670871fd7a8a59bc6d9acfbbb1e2284c6c159792b16308a286b39ca162b3
+723e0e0d83cb50913680e7f298b32b27002c2f88b367a9e34a3e9926675f7bda
+af6609862fe97acd46379dbe6fcf75b7f32f7f611a9cfe5485891adfae236ab9
+399f25233e51dcf60c9fc5ced9f3c4ad606e56c6f5535b2abf332c59ab727577
+59f874b00ef3a13355e1be5ef8d6cf52904b78ae73aabd0201ffb9727a26c402
+b5c66787efca419b3ebcb48303be70b0bd86a9e64ed9f95f0f5150650a9a63d1
+4a55915566396f96c4ade637e1e695725aaad74da0f34997b9c03933dab65321
+b60d355e823a55e80b131648a6b8035c4353e43e42efbb47f2613e5f6e566483
+418064ff2e7c004c322fc1853b3fbed4094011f2dd57ca108d0841f1917a5a26
+5e2447affbbbbc43137d37b7d9a2d2382cb4b6e0ca1d7d5eb17ccd50552b61b5
+42083c1bd80fb2a445df29daf513fdc24de9539f59f24a12e71e81b59595b626
+2b2d88f3bf24a0f422c69b9331a496fb92e4fef1c4c31e27bbdbdf75775f3dbd
+5a6b1e94294ceeaa201f3de6b0ff608fe0ad253922b153fdfb4d02b37cdd2149
+"
+
+retire_known() {
+  local relative_target="$1"
+  local target_path="$HOME/$relative_target"
+  [[ -e "$target_path" || -L "$target_path" ]] || return 0
+  if [[ -L "$target_path" || ! -f "$target_path" ]] ||
+    ! grep -Fqx "$(sha256_file "$target_path")" <<<"$SPEC_ORCHESTRATION_DIGESTS"; then
+    log "PRESERVE   ~/$relative_target (customized; not a known published version)"
+    return
+  fi
+  retire_obsolete "$relative_target"
+}
+
 while IFS='|' read -r source target mode; do
   [[ -n "$source" ]] || continue
   install_one "$source" "$target" "$mode"
@@ -94,13 +124,10 @@ done <<'EOF'
 .config/codex-room/overlays/peer.config.toml|.config/codex-room/overlays/peer.config.toml|600
 .config/codex-room/workflow/WORKSPACE_PROTOCOL.md|.config/codex-room/workflow/WORKSPACE_PROTOCOL.md|644
 .config/codex-room/omp-room.config.yml|.config/codex-room/omp-room.config.yml|644
-.config/codex-room/skills/spec-orchestration/SKILL.md|.config/codex-room/skills/spec-orchestration/SKILL.md|644
-.config/codex-room/skills/spec-orchestration/reference.md|.config/codex-room/skills/spec-orchestration/reference.md|644
-.config/codex-room/skills/spec-orchestration/questions.md|.config/codex-room/skills/spec-orchestration/questions.md|644
-.config/codex-room/skills/spec-orchestration/brief-template.md|.config/codex-room/skills/spec-orchestration/brief-template.md|644
-.config/codex-room/skills/spec-orchestration/scripts/frontier.py|.config/codex-room/skills/spec-orchestration/scripts/frontier.py|755
-.config/codex-room/skills/spec-orchestration/scripts/ticket-field.py|.config/codex-room/skills/spec-orchestration/scripts/ticket-field.py|755
-.config/codex-room/skills/spec-orchestration/scripts/tree-audit.py|.config/codex-room/skills/spec-orchestration/scripts/tree-audit.py|755
+.config/codex-room/workflow/IMPLEMENT_SPEC.md|.config/codex-room/workflow/IMPLEMENT_SPEC.md|644
+.config/codex-room/tools/tree-audit.py|.config/codex-room/tools/tree-audit.py|755
+.config/codex-room/tools/worktree-guard.py|.config/codex-room/tools/worktree-guard.py|755
+.config/codex-room/tools/run-procs.py|.config/codex-room/tools/run-procs.py|755
 .local/bin/codex-room|.local/bin/codex-room|755
 .local/bin/codex-room-sync|.local/bin/codex-room-sync|755
 .local/bin/agent-room|.local/bin/agent-room|755
@@ -119,6 +146,10 @@ for obsolete in \
   .local/bin/codex-room-hard-cut \
   .local/bin/codex-review-apply; do
   retire_obsolete "$obsolete"
+done
+for name in SKILL.md reference.md questions.md brief-template.md scripts/frontier.py \
+  scripts/ticket-field.py scripts/tree-audit.py scripts/worktree-guard.py scripts/run-procs.py; do
+  retire_known ".config/codex-room/skills/spec-orchestration/$name"
 done
 
 if [[ "$apply" != true ]]; then

@@ -32,9 +32,11 @@ evidence, then continue ready work without creating another approval gate.
 - Give every moving write scope one owner. Run writable Peers in parallel
   only with verified, accepted inputs and separate write scopes, and at most
   three at once.
-- A writable Peer may commit its own files locally on the current branch
-  unless Human has forbidden commits. Push, merge, and deployment remain
-  Human decisions.
+- A writable Peer may commit its own files locally on the branch Lead assigned
+  (the current branch unless Lead assigned a worktree branch) unless Human has
+  forbidden commits. Local merges into a Lead-created integration branch are
+  part of the work when Lead assigns them; push, merging into the base branch,
+  and deployment remain Human decisions.
 - Agree on shared contracts before dispatch. Sequence changes to shared files
   or interfaces; use separate branches or worktrees when needed. Do not start
   blocked work merely to increase parallel activity. Continue each ready
