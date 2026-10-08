@@ -148,9 +148,9 @@ restarts Paseo.
 
 | Role | Codex overlay model | Reasoning | Paseo MCP injection (all runtimes) |
 | --- | --- | --- | --- |
-| Supervisor | `gpt-5.6-sol` | medium | yes |
-| Lead | `gpt-5.6-sol` | medium | yes |
-| Peer | `gpt-5.6-sol` | medium | no |
+| Supervisor | `gpt-6.1-sol` | medium | yes |
+| Lead | `gpt-6-astra` | medium | yes |
+| Peer | `gpt-6.1-sol` | medium | no |
 Human retains product, cost, external-effect, and irreversible-risk decisions.
 Supervisor routes Human intent and bounded recovery. Lead owns technical
 framing, dependency order, verification, and explicit candidate acceptance.

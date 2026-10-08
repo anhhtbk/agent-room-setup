@@ -1,6 +1,16 @@
 {
   "models": [
     {
+      "slug": "gpt-6-astra",
+      "display_name": "GPT-6 Astra",
+      "multi_agent_version": "v2"
+    },
+    {
+      "slug": "gpt-6.1-sol",
+      "display_name": "GPT-6.1 Sol",
+      "multi_agent_version": "v2"
+    },
+    {
       "slug": "gpt-5.6-sol",
       "display_name": "GPT-5.6 Sol",
       "multi_agent_version": "v2"

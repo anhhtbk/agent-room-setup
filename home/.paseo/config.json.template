@@ -60,8 +60,8 @@
         },
         "models": [
           {
-            "id": "gpt-5.6-sol",
-            "label": "Sol Medium",
+            "id": "gpt-6.1-sol",
+            "label": "Sol 6.1 Medium",
             "isDefault": true,
             "thinkingOptions": [
               {
@@ -90,24 +90,35 @@
         },
         "models": [
           {
-            "id": "gpt-5.6-sol",
-            "label": "Sol Medium",
-            "thinkingOptions": [
-              {
-                "id": "medium",
-                "label": "Medium",
-                "isDefault": true
-              }
-            ],
-            "isDefault": true
-          },
-          {
             "id": "gpt-6-astra",
             "label": "Astra Low",
             "thinkingOptions": [
               {
                 "id": "low",
                 "label": "Low",
+                "isDefault": true
+              }
+            ]
+          },
+          {
+            "id": "gpt-6.1-sol",
+            "label": "Sol 6.1 Medium",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              }
+            ]
+          },
+          {
+            "id": "gpt-5.6-sol",
+            "label": "Sol Medium",
+            "thinkingOptions": [
+              {
+                "id": "medium",
+                "label": "Medium",
                 "isDefault": true
               }
             ]
@@ -187,20 +198,20 @@
         },
         "models": [
           {
-            "id": "gpt-5.6-sol",
-            "label": "Sol Medium",
+            "id": "gpt-6-astra",
+            "label": "Astra Medium",
+            "isDefault": true,
             "thinkingOptions": [
               {
                 "id": "medium",
                 "label": "Medium",
                 "isDefault": true
               }
-            ],
-            "isDefault": true
+            ]
           },
           {
-            "id": "gpt-6-astra",
-            "label": "Astra Medium",
+            "id": "gpt-5.6-sol",
+            "label": "Sol Medium",
             "thinkingOptions": [
               {
                 "id": "medium",

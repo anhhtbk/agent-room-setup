@@ -109,9 +109,9 @@ class SetupShapeTests(unittest.TestCase):
     def test_role_defaults_are_aligned(self) -> None:
         config = json.loads(PASEO_TEMPLATE.read_text().replace("@@HOME@@", "/tmp/operator"))
         expected = {
-            "supervisor": ("gpt-5.6-sol", "medium"),
-            "lead": ("gpt-5.6-sol", "medium"),
-            "peer": ("gpt-5.6-sol", "medium"),
+            "supervisor": ("gpt-6.1-sol", "medium"),
+            "lead": ("gpt-6-astra", "medium"),
+            "peer": ("gpt-6.1-sol", "medium"),
         }
         for role, (model, effort) in expected.items():
             overlay_text = (ROOM / "overlays" / f"{role}.config.toml").read_text()
@@ -547,7 +547,9 @@ class SetupShapeTests(unittest.TestCase):
             canonical_plugins = home / ".codex/plugins"; canonical_plugins.mkdir(parents=True)
             for role in ("supervisor", "lead", "peer"):
                 role_home = runtime / role; role_home.mkdir(parents=True)
+                model = "gpt-6-astra" if role == "lead" else "gpt-6.1-sol"
                 (role_home / "config.toml").write_text(
+                    f'model = "{model}"\nmodel_reasoning_effort = "medium"\n'
                     "[features]\nmulti_agent = false\nmulti_agent_v2 = false\n\n[agents]\nenabled = false\n"
                 )
                 (role_home / "model-catalog.no-native-agents.json").write_text(
@@ -593,6 +595,7 @@ class SetupShapeTests(unittest.TestCase):
             lead_config = runtime / "lead/config.toml"
             valid_config = lead_config.read_text()
             lead_config.write_text(
+                'model = "gpt-6-astra"\nmodel_reasoning_effort = "medium"\n'
                 "enabled = false\nmulti_agent = false\nmulti_agent_v2 = false\n"
                 "[agents]\nenabled = true\n"
                 "[features]\nmulti_agent = true\nmulti_agent_v2 = true\n"
@@ -605,6 +608,7 @@ class SetupShapeTests(unittest.TestCase):
             lead_config.write_text(valid_config)
 
             table_config = (
+                'model = "gpt-6-astra"\nmodel_reasoning_effort = "medium"\n'
                 "[agents]\nenabled = false\n[features]\nmulti_agent = false\n"
                 "[features.multi_agent_v2]\nenabled = false\nmax_concurrent_threads_per_session = 12\n"
             )
@@ -1399,9 +1403,9 @@ class RuntimeGenerationTests(unittest.TestCase):
 
     def test_all_roles_generate_isolated_configs(self) -> None:
         expected = {
-            "supervisor": ("gpt-5.6-sol", "medium"),
-            "lead": ("gpt-5.6-sol", "medium"),
-            "peer": ("gpt-5.6-sol", "medium"),
+            "supervisor": ("gpt-6.1-sol", "medium"),
+            "lead": ("gpt-6-astra", "medium"),
+            "peer": ("gpt-6.1-sol", "medium"),
         }
         for role, (model, effort) in expected.items():
             runtime = self.run_sync(role)

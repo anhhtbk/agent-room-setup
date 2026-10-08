@@ -259,9 +259,31 @@ for runtime in claude omp; do
 done
 check "exact Paseo tool boundary" jq -e -f "$REPO_ROOT/scripts/lib/paseo-tools.jq" "$config_template"
 
+# Parse TOML, rather than matching text that might occur in instructions/tables.
+toml_python="${CODEX_ROOM_TOML_PYTHON:-}"
+if [[ -z "$toml_python" ]]; then
+  for candidate in python3 python3.12 python3.11; do
+    if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c 'import tomllib' >/dev/null 2>&1; then
+      toml_python="$candidate"
+      break
+    fi
+  done
+fi
+[[ -n "$toml_python" ]] || die "model alignment requires Python 3.11+ with tomllib; set CODEX_ROOM_TOML_PYTHON"
+require_command "$toml_python"
+alignment_args=("$config_template" "$overlays_root")
 if [[ "$mode" == installed ]]; then
-  toml_python="${CODEX_ROOM_TOML_PYTHON:-python3.11}"
-  require_command "$toml_python"
+  alignment_args+=(--runtime-root "${CODEX_ROOM_RUNTIME_ROOT:-$HOME/.codex-runtime}")
+fi
+if alignment_result=$("$toml_python" "$REPO_ROOT/scripts/lib/model-alignment.py" "${alignment_args[@]}" 2>&1); then
+  log "OK    role model/effort defaults aligned ($mode)"
+else
+  log "FAIL  role model/effort defaults aligned ($mode)"
+  printf '%s\n' "$alignment_result" >&2
+  failures=$((failures + 1))
+fi
+
+if [[ "$mode" == installed ]]; then
   runtime_policy_disabled() {
     "$toml_python" - "$1" <<'PY'
 import pathlib
