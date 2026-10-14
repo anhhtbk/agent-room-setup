@@ -66,7 +66,14 @@ project) cùng bảng ánh xạ Room ở `~/.config/codex-room/workflow/IMPLEMEN
   chính; `worktree-guard.py` chỉ xóa worktree khi nội dung khớp baseline do
   chính writer ghi lúc bàn giao (`--head` = candidate SHA, `--digest` trong
   disposition); `run-procs.py` chạy lệnh trong process group của run và chỉ
-  dừng group đó.
+  dừng group đó; `room-gc.py` báo dung lượng và xóa `$RUN/cache` (môi trường
+  xác minh, build, dữ liệu DB dựng lại được), từ chối khi còn process sống
+  trong `$RUN/procs`.
+- Dọn dung lượng: Lead xóa cache của candidate khi candidate đã chốt và xóa cả
+  `$RUN/cache` ở bước Finish. Xem tay:
+  `python3 ~/.config/codex-room/tools/room-gc.py report <thư mục spec>`; đặt
+  `CODEX_ROOM_RUN_ROOTS` (phân tách bằng `:`) để `make doctor` báo cả các spec
+  folder ngoài `~/.local/state/codex-room/runs`.
 - Câu hỏi kỹ thuật Lead tự trả lời; câu hỏi nghiệp vụ Lead hỏi Human trong chat
   và chỉ tiếp tục các ticket độc lập với câu hỏi.
 

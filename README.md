@@ -179,7 +179,10 @@ Room tools in `~/.config/codex-room/tools/`: `tree-audit.py` reports branch
 switches, resets, stash, pushes, and edits to files Human had dirty in the
 main checkout; `worktree-guard.py` removes a worktree only when its content
 equals the writer's handoff baseline; `run-procs.py` runs commands in a
-run-owned process group and stops only that group.
+run-owned process group and stops only that group; `room-gc.py` reports and
+deletes the rebuildable `$RUN/cache`, refusing while a registered process
+still uses it (`make doctor` reports run directories under
+`~/.local/state/codex-room/runs` and `CODEX_ROOM_RUN_ROOTS`).
 
 ## Claude Code and omp roles
 

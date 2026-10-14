@@ -99,6 +99,14 @@ else
   warnings=$((warnings + 1))
 fi
 
+# Room run directories: disk use of rebuildable caches. Extra roots (spec
+# folders outside ~/.local/state) come from CODEX_ROOM_RUN_ROOTS, colon-separated.
+IFS=':' read -r -a run_roots <<<"${CODEX_ROOM_RUN_ROOTS:-}"
+while IFS= read -r line; do
+  log "INFO  $line"
+done < <(python3 "$REPO_ROOT/home/.config/codex-room/tools/room-gc.py" report \
+  "$HOME/.local/state/codex-room/runs" ${run_roots[@]+"${run_roots[@]}"} 2>&1 | grep -E '^(RUN|MISSING|NO-RUNS)' || true)
+
 log ""
 if [[ "$failures" -gt 0 ]]; then
   die "$failures required check(s) failed; $warnings warning(s)"

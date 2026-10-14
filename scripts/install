@@ -128,6 +128,7 @@ done <<'EOF'
 .config/codex-room/tools/tree-audit.py|.config/codex-room/tools/tree-audit.py|755
 .config/codex-room/tools/worktree-guard.py|.config/codex-room/tools/worktree-guard.py|755
 .config/codex-room/tools/run-procs.py|.config/codex-room/tools/run-procs.py|755
+.config/codex-room/tools/room-gc.py|.config/codex-room/tools/room-gc.py|755
 .local/bin/codex-room|.local/bin/codex-room|755
 .local/bin/codex-room-sync|.local/bin/codex-room-sync|755
 .local/bin/agent-room|.local/bin/agent-room|755
@@ -150,6 +151,24 @@ done
 for name in SKILL.md reference.md questions.md brief-template.md scripts/frontier.py \
   scripts/ticket-field.py scripts/tree-audit.py scripts/worktree-guard.py scripts/run-procs.py; do
   retire_known ".config/codex-room/skills/spec-orchestration/$name"
+done
+# Retiring files leaves their directories behind; an empty leftover still
+# advertises the removed skill to agents listing the room. Deepest first, and
+# only while empty, so customized copies keep their directory.
+for retired_dir in \
+  .config/codex-room/skills/spec-orchestration/scripts \
+  .config/codex-room/skills/spec-orchestration \
+  .config/codex-room/skills; do
+  retired_path="$HOME/$retired_dir"
+  [[ -d "$retired_path" && ! -L "$retired_path" ]] || continue
+  if [[ "$apply" != true ]]; then
+    [[ -z "$(find "$retired_path" ! -type d -print -quit)" ]] || continue
+    changed=$((changed + 1))
+    log "PRUNE      ~/$retired_dir"
+  elif rmdir "$retired_path" 2>/dev/null; then
+    changed=$((changed + 1))
+    log "PRUNED     ~/$retired_dir"
+  fi
 done
 
 if [[ "$apply" != true ]]; then

@@ -42,7 +42,7 @@ for name in WORKSPACE_PROTOCOL.md IMPLEMENT_SPEC.md; do
   export_one "$HOME/.config/codex-room/workflow/$name" "$REPO_ROOT/home/.config/codex-room/workflow/$name"
 done
 export_one "$HOME/.config/codex-room/omp-room.config.yml" "$REPO_ROOT/home/.config/codex-room/omp-room.config.yml"
-for name in tree-audit.py worktree-guard.py run-procs.py; do
+for name in tree-audit.py worktree-guard.py run-procs.py room-gc.py; do
   export_one "$HOME/.config/codex-room/tools/$name" "$REPO_ROOT/home/.config/codex-room/tools/$name"
 done
 for name in codex-room codex-room-sync agent-room paseo-local-update; do

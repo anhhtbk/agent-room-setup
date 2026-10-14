@@ -82,7 +82,7 @@ check "omp room overlay removes native subagents" grep -Eq '^[[:space:]]+maxRecu
 check "workspace protocol exists" test -f "$workflow_root/WORKSPACE_PROTOCOL.md"
 check "Paseo provenance manifest exists" test -f "$REPO_ROOT/paseo/source.toml"
 check "implement-spec Room mapping exists" test -f "$workflow_root/IMPLEMENT_SPEC.md"
-for tool in tree-audit.py worktree-guard.py run-procs.py; do
+for tool in tree-audit.py worktree-guard.py run-procs.py room-gc.py; do
   check "room tool $tool is executable" test -x "$tools_root/$tool"
 done
 check "Lead routes specs to the global implement-spec skill" grep -Fq "~/.agents/skills/implement-spec/SKILL.md" "$overlays_root/lead.config.toml"
@@ -180,6 +180,15 @@ obsolete_is_inactive() {
 for obsolete_path in "${obsolete_paths[@]}"; do
   check "obsolete path is inactive: $obsolete_path" obsolete_is_inactive "$obsolete_path"
 done
+
+# Retired directories must not linger empty: an agent listing the room reads
+# an empty skills/spec-orchestration as a live skill and guesses its SKILL.md.
+retired_tree_has_no_empty_directory() {
+  [[ -d "$1" && ! -L "$1" ]] || return 0
+  [[ -z "$(find "$1" -type d -empty -print -quit)" ]]
+}
+check "retired skills tree has no empty directory: $(dirname "$spec_orchestration")" \
+  retired_tree_has_no_empty_directory "$(dirname "$spec_orchestration")"
 
 if [[ "$mode" == source ]]; then
   for historical_fixture in \

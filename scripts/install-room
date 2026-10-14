@@ -94,6 +94,10 @@ OBSOLETE_HASHES = {
         "5a6b1e94294ceeaa201f3de6b0ff608fe0ad253922b153fdfb4d02b37cdd2149",
     },
 }
+# Directories left behind once their retired files are gone, deepest first.
+# An empty leftover still advertises the removed skill to agents that list the
+# room, so it is pruned; a directory holding anything else is kept.
+RETIRED_DIRECTORIES = (f"{SPEC_ORCHESTRATION}/scripts", SPEC_ORCHESTRATION, ".config/codex-room/skills")
 OBSOLETE_TEMPLATES = {
     ".config/codex-room/paseo.phase2-coexist.candidate.json":
         LEGACY_SOURCE_ROOT / "paseo.phase2-coexist.candidate.json.template",
@@ -125,6 +129,7 @@ MANAGED_FILES = (
     (".config/codex-room/tools/tree-audit.py", ".config/codex-room/tools/tree-audit.py", 0o755),
     (".config/codex-room/tools/worktree-guard.py", ".config/codex-room/tools/worktree-guard.py", 0o755),
     (".config/codex-room/tools/run-procs.py", ".config/codex-room/tools/run-procs.py", 0o755),
+    (".config/codex-room/tools/room-gc.py", ".config/codex-room/tools/room-gc.py", 0o755),
     (".local/bin/codex-room", ".local/bin/codex-room", 0o755),
     (".local/bin/codex-room-sync", ".local/bin/codex-room-sync", 0o755),
     (".local/bin/agent-room", ".local/bin/agent-room", 0o755),
@@ -518,6 +523,18 @@ def obsolete_state(home: Path) -> list[tuple[str, str]]:
         else:
             result.append((relative, "preserve-warning"))
     return result
+
+
+def prunable_directories(home: Path, retiring: frozenset[Path] = frozenset()) -> list[Path]:
+    """Return retired directories that are empty once `retiring` files are gone."""
+    pruned: list[Path] = []
+    for relative in RETIRED_DIRECTORIES:
+        path = home / relative
+        if path.is_symlink() or not path.is_dir():
+            continue
+        if all(child in pruned or child in retiring for child in path.iterdir()):
+            pruned.append(path)
+    return pruned
 
 
 def check_managed_obstacles(home: Path) -> None:
@@ -1089,8 +1106,12 @@ def print_plan(home: Path) -> int:
             else ("replace" if target.exists() or target.is_symlink() else "create")
         )
         out(f"  {state.upper():7} {target} mode={mode:04o}")
-    for relative, state in obsolete_state(home):
+    obsolete = obsolete_state(home)
+    for relative, state in obsolete:
         out(f"  {state.upper():17} {home / relative}")
+    retiring = frozenset(home / relative for relative, state in obsolete if state == "retire")
+    for directory in prunable_directories(home, retiring):
+        out(f"  {'PRUNE':17} {directory}")
     out("GENERATE  supervisor, lead, peer into existing CODEX runtime root")
     for runtime, variable in (("claude", "CLAUDE_BIN"), ("omp", "OMP_BIN")):
         found = command_path(os.environ.get(variable, runtime))
@@ -1179,6 +1200,8 @@ def apply_install(home: Path) -> int:
                 for relative, state in obsolete_state(home):
                     if state == "retire":
                         transaction.retire(home / relative, relative.replace("/", "_"))
+                for directory in prunable_directories(home):
+                    directory.rmdir()
 
                 runtime_root = runtime_path(home)
                 if runtime_root.is_symlink() or (runtime_root.exists() and not runtime_root.is_dir()):

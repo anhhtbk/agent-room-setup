@@ -251,6 +251,20 @@ class SetupShapeTests(unittest.TestCase):
             self.assertEqual(snapshot(runtime_root), legacy_before)
             self.assertTrue(all(not (fake_home / relative).exists() for relative in obsolete))
 
+    def test_upgrade_prunes_empty_retired_skill_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            fake_home = Path(temporary)
+            (fake_home / ".codex").mkdir()
+            skills = fake_home / ".config/codex-room/skills"
+            (skills / "spec-orchestration/scripts").mkdir(parents=True)
+            env = {**os.environ, "HOME": str(fake_home)}
+            subprocess.run(
+                [str(ROOT / "scripts/install"), "--apply"],
+                check=True, env=env, capture_output=True, text=True,
+            )
+            self.assertFalse(skills.exists())
+            self.assertTrue((fake_home / ".config/codex-room/overlays/lead.config.toml").is_file())
+
     def test_paseo_fresh_install_is_exact_and_atomic(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary); home = root / "home"; target = root / "installed"
@@ -1252,6 +1266,26 @@ class PublicInstallTransactionTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
         self.assertFalse((self.home / ".config/codex-room/paseo.phase2-coexist.candidate.json").exists())
         self.assertFalse((self.home / ".config/codex-room/paseo.phase2-hard-cut.candidate.json").exists())
+
+    def test_retired_skill_directories_are_pruned_unless_customized(self) -> None:
+        skills = self.home / ".config/codex-room/skills"
+        (skills / "spec-orchestration/scripts").mkdir(parents=True)
+        paseo = self.make_fake_paseo()
+        verifier = self.make_fake_verifier()
+        env = self.lifecycle_env(paseo, verifier)
+        plan = self.run_install((), env)
+        self.assertRegex(plan.stdout, r"PRUNE +\S+/codex-room/skills/spec-orchestration/scripts\n")
+        self.assertRegex(plan.stdout, r"PRUNE +\S+/codex-room/skills\n")
+        completed = self.run_install(("--apply",), env)
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+        self.assertFalse(skills.exists())
+
+        customized = skills / "spec-orchestration/SKILL.md"
+        customized.parent.mkdir(parents=True)
+        customized.write_text("operator notes\n")
+        completed = self.run_install(("--apply",), env)
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+        self.assertEqual(customized.read_text(), "operator notes\n")
 
     def test_external_checkout_metadata_link_fails_before_publish(self) -> None:
         paseo = self.make_fake_paseo()

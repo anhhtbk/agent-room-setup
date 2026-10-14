@@ -13,6 +13,12 @@ protocol win; everything else follows the skill. Any agent loads a named skill
   `<spec folder>/.room` when the spec folder is outside all repositories,
   otherwise `~/.local/state/codex-room/runs/<slug>`. Lead creates it
   (`mkdir -p $RUN`) and owns it, except the per-Peer paths granted below.
+- `CACHE=$RUN/cache`: every byte that can be rebuilt from a commit
+  (verification instances, build and publish output, database data, copied
+  dependencies), one directory per candidate or instance. Bytes outside
+  `CACHE` are kept: baselines, manifests, logs, notes, evidence. Processes
+  that use `CACHE` run through `run-procs.py` with a registry under
+  `$RUN/procs/`, so `room-gc.py` can see them.
 - Repositories: every repository the spec or a ticket names (for example a
   ticket's `Repo:` line; `cross-repo` means each repository it touches). For
   each repository `R`: `W_R` = the project's documented worktree directory,
@@ -123,8 +129,10 @@ states:
   remote tracker (Plane, GitHub, GitLab), push, PR, merging into the base
   branch, and deployment happen only when Human asks.
 - Finish: every accepted SHA is an ancestor of its integration tip;
-  `python3 $T/tree-audit.py check $RUN/baseline.json --quiet-point`; report
-  each `<slug>/integration` branch and SHA.
+  `python3 $T/tree-audit.py check $RUN/baseline.json --quiet-point`;
+  `python3 $T/run-procs.py stop` on every registry under `$RUN/procs/`, then
+  `python3 $T/room-gc.py clean $RUN --apply`; report each
+  `<slug>/integration` branch and SHA, and the `SUMMARY` line.
 
 ## Cleanup
 
@@ -140,3 +148,11 @@ its adopted workspace (the response must show `removedDirectory: false`), then
 `python3 $T/worktree-guard.py remove <manifest> --owner <slug> --digest <digest from the disposition>`.
 `REFUSE`, `DIFF`, or `PARTIAL`: keep what is left and ask Human. Branches,
 integration worktrees, and their workspaces stay for Human.
+
+A candidate's `CACHE` entry is disposable once that candidate is accepted,
+rejected, or superseded and its evidence is written outside `CACHE`: stop its
+registry with `run-procs.py stop`, then
+`python3 $T/room-gc.py clean $RUN --entry <name> --apply`. Keep only the
+runnable output of a build inside an entry; intermediate build trees go as
+soon as the runnable output exists. `REFUSE` from `room-gc.py`: stop the named
+record, never delete around it.

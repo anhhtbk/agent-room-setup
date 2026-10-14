@@ -54,6 +54,7 @@ done <<'EOF'
 .config/codex-room/tools/tree-audit.py|.config/codex-room/tools/tree-audit.py
 .config/codex-room/tools/worktree-guard.py|.config/codex-room/tools/worktree-guard.py
 .config/codex-room/tools/run-procs.py|.config/codex-room/tools/run-procs.py
+.config/codex-room/tools/room-gc.py|.config/codex-room/tools/room-gc.py
 .local/bin/codex-room|.local/bin/codex-room
 .local/bin/codex-room-sync|.local/bin/codex-room-sync
 .local/bin/agent-room|.local/bin/agent-room
