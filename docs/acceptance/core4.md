@@ -6,8 +6,8 @@ consolidated Human review of CORE-2, CORE-3, CORE-4, and the Epic.
 
 ## Public contract
 
-From a clean clone, an operator prepares an existing authenticated Codex home
-and runs:
+From a clean clone, an operator prepares the common dependencies and runs
+(an authenticated Codex home is optional):
 
 ```bash
 ./install
@@ -17,14 +17,14 @@ paseo daemon start
 ```
 
 The first command is read-only. Apply stages the pinned Paseo checkout, the
-managed HOME files, and the Supervisor, Lead, and Peer runtimes as one
-transaction. Verification is read-only and includes the live provider
+managed HOME files, and, when Codex prerequisites are available, the Supervisor,
+Lead, and Peer Codex runtimes as one transaction. Verification is read-only and includes the live provider
 inventory, so it requires a reachable Paseo daemon. `scripts/verify` and the
 other lower-level scripts are maintenance interfaces for an already installed
 room.
 
-The room owns exactly three derived providers: `codex-supervisor`,
-`codex-lead`, and `codex-peer`. Paseo MCP is injected into Supervisor and Lead;
+The room owns three derived providers per runtime (`codex-*`, `claude-*`,
+`omp-*`). Paseo MCP is injected into Supervisor and Lead;
 Peer has no orchestration tools. Human retains product, cost, external-effect,
 and irreversible-risk decisions. Supervisor routes intent, Lead owns technical
 acceptance, and Peer owns one bounded outcome at a time.
@@ -35,6 +35,55 @@ runtime directories. Only recognized, unchanged obsolete artifacts are retired;
 customized or redirecting artifacts are preserved with a warning. Transaction
 backups are owner-only. The installer does not authenticate Codex, start the
 daemon, manage operator credentials, or install Desktop GUI state.
+
+## Optional Codex setup acceptance — 2026-10-15
+
+Lead disposition: **ACCEPT** the bounded change making Codex optional for
+setup, not removing Codex support. Base: `dd8f58d753b626273238ae71e17eff94a2ad1535`;
+candidate is the current working-tree patch, identified by its SHA-256 in the
+delivery. No Peer dispatch, push, deployment, daemon start, or real-HOME install.
+
+Missing CLI (unless an offline catalog is supplied) or required shared
+resources now skips Codex generation/runtime checks. Existing Codex runtime
+bytes and permissions remain untouched on this route. All provider definitions
+and launchers remain installed. Restoring prerequisites and reapplying resumes
+generation; available invalid inputs still use the existing fail-closed path.
+
+Evidence:
+
+- Missing-Codex regression failed before the change at the required-command
+  gate, then passed with an isolated PATH containing no `codex`.
+- `python3 -m unittest discover -s tests -p test_setup.py -v -f`:
+  62 tests passed, including no-Codex apply/reapply, runtime preservation,
+  missing-resource recovery, Codex generation, rollback and launcher behavior.
+- `python3 -m unittest discover -s tests -p test_model_alignment.py`:
+  10 tests passed. `./scripts/verify --source`: `VERIFY_OK`.
+- `bash -n scripts/verify scripts/doctor` and `python3 -m py_compile
+  scripts/install-room tests/test_setup.py tests/test_model_alignment.py`: passed.
+- The remaining `unittest discover -s tests -p <file>` runs passed:
+  `test_container_interface.py` (5), `test_paseo_release.py` (11),
+  `test_room_gc.py` (5), `test_run_procs.py` (19), and
+  `test_worktree_guard.py` (22). All seven modules: **134 tests passed**.
+- Disposable CLI smoke: actual `install`, `install --apply` twice,
+  `scripts/verify`, and `scripts/doctor` all exited 0 without Codex or a Codex
+  home. Used the existing local Paseo Git/npm fixtures with only the copied
+  manifest pointed at that fixture; installer and verifier were not mocked.
+  No `.codex` or `.codex-runtime` was created.
+
+Limits and non-pass results: the initial full-suite run hit its 300-second
+deadline and exposed an alignment fixture that needed the optional runtime's
+prerequisites; the updated alignment suite passed. The remote real-Paseo
+install was cancelled via SIGINT during preparation, not accepted as a build
+pass. Standalone verification initially failed three lexical-path comparisons
+with macOS `/var` versus `/private/var`; using the canonical temporary HOME
+passed, without expanding this change into path normalization.
+No live provider daemon or authenticated agent session was exercised.
+Operators still install/authenticate their chosen runtime independently.
+
+Smoke logs: temporary directory
+`room-no-codex-co5xlcek` under the session's macOS temporary root; files
+`apply.log`, `install.log`, `install-apply.log`,
+`scripts-verify-canonical-home.log`, and `scripts-doctor-canonical-home.log`.
 
 ## Evidence matrix
 

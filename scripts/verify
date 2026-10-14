@@ -16,7 +16,20 @@ done
 
 require_command python3
 require_command jq
-[[ "$mode" == source ]] || require_command codex
+codex_enabled=false
+if [[ "$mode" == installed ]]; then
+  if [[ -n "${CODEX_ROOM_MODEL_CATALOG:-}" ]] || command -v "${CODEX_BIN:-codex}" >/dev/null 2>&1; then
+    codex_enabled=true
+    for resource in config.toml auth.json AGENTS.md skills plugins; do
+      if [[ ! -e "$HOME/.codex/$resource" && ! -L "$HOME/.codex/$resource" ]]; then
+        codex_enabled=false
+      fi
+    done
+  fi
+  if [[ "$codex_enabled" == false ]]; then
+    log "SKIP  Codex runtime checks: optional prerequisites unavailable; existing runtime preserved"
+  fi
+fi
 
 failures=0
 check() {
@@ -281,7 +294,7 @@ fi
 [[ -n "$toml_python" ]] || die "model alignment requires Python 3.11+ with tomllib; set CODEX_ROOM_TOML_PYTHON"
 require_command "$toml_python"
 alignment_args=("$config_template" "$overlays_root")
-if [[ "$mode" == installed ]]; then
+if [[ "$codex_enabled" == true ]]; then
   alignment_args+=(--runtime-root "${CODEX_ROOM_RUNTIME_ROOT:-$HOME/.codex-runtime}")
 fi
 if alignment_result=$("$toml_python" "$REPO_ROOT/scripts/lib/model-alignment.py" "${alignment_args[@]}" 2>&1); then
@@ -345,6 +358,7 @@ PY
   check "Paseo stable release tag" test "$(git -C "$paseo_checkout" rev-parse "refs/tags/$expected_paseo_tag^{commit}" 2>/dev/null || true)" = "$expected_paseo_commit"
   check "Paseo remote set" test "$(git -C "$paseo_checkout" remote)" = origin
   runtime_root="${CODEX_ROOM_RUNTIME_ROOT:-$HOME/.codex-runtime}"
+  if [[ "$codex_enabled" == true ]]; then
   for role in supervisor lead peer; do
     runtime="$runtime_root/$role"
     check "$role runtime config" test -f "$runtime/config.toml"
@@ -366,6 +380,7 @@ PY
     check "$role plugins use canonical symlink" test \
       "$(readlink "$runtime/plugins" 2>/dev/null || true)" = "$HOME/.codex/plugins"
   done
+  fi
 fi
 
 if [[ "$live" == true ]]; then

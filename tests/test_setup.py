@@ -559,6 +559,9 @@ class SetupShapeTests(unittest.TestCase):
             link = home / ".local/bin/paseo"
             link.symlink_to(paseo / "packages/cli/bin/paseo")
             canonical_plugins = home / ".codex/plugins"; canonical_plugins.mkdir(parents=True)
+            for resource in ("config.toml", "auth.json", "AGENTS.md"):
+                (home / ".codex" / resource).write_text("")
+            (home / ".codex/skills").mkdir()
             for role in ("supervisor", "lead", "peer"):
                 role_home = runtime / role; role_home.mkdir(parents=True)
                 model = "gpt-6-astra" if role == "lead" else "gpt-6.1-sol"
@@ -901,6 +904,37 @@ class PublicInstallTransactionTests(unittest.TestCase):
         self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
         self.assertEqual((self.root / "verify.log").read_text().splitlines()[-1], "--live")
 
+    def test_install_without_codex_preserves_optional_state(self) -> None:
+        import shutil
+        shutil.rmtree(self.home / ".codex")
+        verifier = self.executable(self.root / "verify-core", "#!/bin/sh\n"
+                                   'test -f "$HOME/.paseo/config.json"\n')
+        env = self.lifecycle_env(self.make_fake_paseo(), verifier)
+        bin_dir = self.root / "bin"
+        bin_dir.mkdir()
+        for command in ("python3", "node", "npm", "jq"):
+            (bin_dir / command).symlink_to(shutil.which(command))
+        env["PATH"] = str(bin_dir) + ":/usr/bin:/bin:/usr/sbin:/sbin"
+        env.pop("CODEX_ROOM_MODEL_CATALOG", None)
+        env.pop("CODEX_BIN", None)
+        self.assertIsNone(shutil.which("codex", path=env["PATH"]))
+        for arguments in ((), ("--apply",)):
+            result = self.run_install(arguments, env)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertFalse((self.home / ".codex").exists())
+        self.assertFalse((self.home / ".codex-runtime").exists())
+        providers = json.loads((self.home / ".paseo/config.json").read_text())["agents"]["providers"]
+        for runtime in ("codex", "claude", "omp"):
+            self.assertIn(f"{runtime}-lead", providers)
+        runtime = self.home / ".codex-runtime"
+        runtime.mkdir(mode=0o755)
+        (runtime / "private.sqlite").write_bytes(b"private\x00")
+        before = self.tree_snapshot(runtime)
+        result = self.run_install(("--apply",), env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.tree_snapshot(runtime), before)
+        self.assertEqual(runtime.stat().st_mode & 0o777, 0o755)
+
     def test_default_plan_is_complete_and_non_mutating(self) -> None:
         paseo = self.make_fake_paseo()
         verifier = self.make_fake_verifier()
@@ -937,16 +971,27 @@ class PublicInstallTransactionTests(unittest.TestCase):
         self.assertEqual(redirected.read_text(), "operator-owned bytes\n")
         self.assertFalse((self.home / "projects").exists())
 
-    def test_missing_resource_and_bad_catalog_fail_during_staging(self) -> None:
+    def test_missing_codex_resource_skips_then_reenables_generation(self) -> None:
         auth = self.home / ".codex/auth.json"
         auth.unlink()
+        verifier = self.executable(self.root / "verify-core", "#!/bin/sh\n"
+                                   'test -f "$HOME/.paseo/config.json"\n')
+        paseo = self.make_fake_paseo()
+        env = self.lifecycle_env(paseo, verifier)
+        before = self.tree_snapshot(self.home / ".codex")
+        result = self.run_install(("--apply",), env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.tree_snapshot(self.home / ".codex"), before)
+        self.assertFalse((self.home / ".codex-runtime").exists())
+        auth.write_text("operator\n")
+        result = self.run_install(("--apply",), self.lifecycle_env(paseo, self.make_fake_verifier()))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        for role in ("supervisor", "lead", "peer"):
+            self.assertTrue((self.home / ".codex-runtime" / role / "config.toml").is_file())
+
+    def test_bad_catalog_fails_during_staging(self) -> None:
         paseo = self.make_fake_paseo()
         verifier = self.make_fake_verifier()
-        missing = self.run_install(("--apply",), self.lifecycle_env(paseo, verifier))
-        self.assertNotEqual(missing.returncode, 0)
-        self.assertFalse((self.home / "projects").exists())
-
-        auth.write_text("operator\n")
         bad_catalog = self.root / "bad-catalog.json"
         bad_catalog.write_text('{"models": []}\n')
         failed = self.run_install(

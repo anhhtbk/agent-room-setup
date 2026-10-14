@@ -175,6 +175,11 @@ class ModelAlignmentTests(unittest.TestCase):
         repo, env = self.copy_verifier_tree()
         home = repo / "home"
         env["HOME"] = str(home)
+        (home / ".codex").mkdir()
+        for resource in ("config.toml", "auth.json", "AGENTS.md"):
+            (home / ".codex" / resource).write_text("")
+        for resource in ("skills", "plugins"):
+            (home / ".codex" / resource).mkdir()
         env["CODEX_ROOM_RUNTIME_ROOT"] = str(self.runtime)
         env["PASEO_REPO_DIR"] = str(self.root / "absent-paseo-checkout")
         env["PASEO_CLI_LINK"] = str(self.root / "absent-paseo-cli")

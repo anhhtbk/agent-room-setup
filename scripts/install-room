@@ -463,10 +463,7 @@ def toml_interpreter() -> str:
 
 
 def required_commands(apply: bool) -> list[str]:
-    commands = ["git", "node", os.environ.get("PASEO_NPM_BIN", "npm"), "jq"]
-    if not os.environ.get("CODEX_ROOM_MODEL_CATALOG"):
-        commands.append(os.environ.get("CODEX_BIN", "codex"))
-    return commands
+    return ["git", "node", os.environ.get("PASEO_NPM_BIN", "npm"), "jq"]
 
 
 def check_commands(apply: bool) -> None:
@@ -708,6 +705,21 @@ def check_paseo_obstacles(paths: dict[str, Path | str], home: Path) -> None:
     check_direct_parents(cli.parent)
     if cli.exists() and cli.is_dir() and not cli.is_symlink():
         fail(f"Paseo CLI link is an unsafe directory obstacle: {cli}")
+
+
+def codex_available(home: Path) -> bool:
+    missing = []
+    if not os.environ.get("CODEX_ROOM_MODEL_CATALOG") and not command_path(os.environ.get("CODEX_BIN", "codex")):
+        missing.append("Codex CLI")
+    for name in ("config.toml",) + ROLE_SHARED_REQUIRED:
+        path = home / ".codex" / name
+        if not path.exists() and not path.is_symlink():
+            missing.append(str(path))
+    if missing:
+        out("SKIP      Codex runtime generation/checks; missing: " + ", ".join(missing))
+        out("PRESERVE  existing Codex runtime; install/authenticate Codex and rerun to enable")
+        return False
+    return True
 
 
 def check_operator_codex(home: Path) -> None:
@@ -1112,7 +1124,9 @@ def print_plan(home: Path) -> int:
     retiring = frozenset(home / relative for relative, state in obsolete if state == "retire")
     for directory in prunable_directories(home, retiring):
         out(f"  {'PRUNE':17} {directory}")
-    out("GENERATE  supervisor, lead, peer into existing CODEX runtime root")
+    codex_enabled = codex_available(home)
+    if codex_enabled:
+        out("GENERATE  supervisor, lead, peer into existing CODEX runtime root")
     for runtime, variable in (("claude", "CLAUDE_BIN"), ("omp", "OMP_BIN")):
         found = command_path(os.environ.get(variable, runtime))
         state = "found" if found else f"missing; {runtime}-* providers stay unavailable"
@@ -1123,8 +1137,9 @@ def print_plan(home: Path) -> int:
         check_commands(False)
         check_configured_path_safety(paths, home)
         check_managed_obstacles(home)
-        check_operator_codex(home)
-        check_runtime_obstacles(home)
+        if codex_enabled:
+            check_operator_codex(home)
+            check_runtime_obstacles(home)
         check_paseo_obstacles(paths, home)
         validate_existing_paseo(paths)
     except (InstallError, OSError, subprocess.CalledProcessError) as error:
@@ -1142,8 +1157,10 @@ def apply_install(home: Path) -> int:
             check_commands(True)
             check_configured_path_safety(paths, home)
             check_managed_obstacles(home)
-            check_operator_codex(home)
-            check_runtime_obstacles(home)
+            codex_enabled = codex_available(home)
+            if codex_enabled:
+                check_operator_codex(home)
+                check_runtime_obstacles(home)
             check_paseo_obstacles(paths, home)
             validate_existing_paseo(paths)
             # A disposable preflight validates the exact remote pin, npm lock
@@ -1152,7 +1169,7 @@ def apply_install(home: Path) -> int:
             with tempfile.TemporaryDirectory(prefix="codex-room-core3-", dir=os.environ.get("TMPDIR")) as temporary:
                 stage = Path(temporary)
                 rendered = stage_home(stage, home)
-                role_outputs = generate_role_stage(stage, home)
+                role_outputs = generate_role_stage(stage, home) if codex_enabled else {}
                 check_cancelled()
 
                 # The transaction is created only after every generated output
@@ -1204,14 +1221,14 @@ def apply_install(home: Path) -> int:
                     directory.rmdir()
 
                 runtime_root = runtime_path(home)
-                if runtime_root.is_symlink() or (runtime_root.exists() and not runtime_root.is_dir()):
+                if role_outputs and (runtime_root.is_symlink() or (runtime_root.exists() and not runtime_root.is_dir())):
                     fail(f"runtime root is not a direct directory: {runtime_root}")
-                if not runtime_root.exists():
+                if role_outputs and not runtime_root.exists():
                     runtime_root.mkdir(mode=0o700)
                     transaction.created_dirs.append(runtime_root)
-                else:
+                elif role_outputs:
                     transaction.set_mode(runtime_root, 0o700)
-                for role in ROLES:
+                for role in role_outputs:
                     role_root = runtime_root / role
                     if role_root.is_symlink() or (role_root.exists() and not role_root.is_dir()):
                         fail(f"runtime role directory is not a direct directory: {role_root}")

@@ -16,31 +16,36 @@ check_command() {
   fi
 }
 
-for command_name in codex python3 git jq node npm; do
+for command_name in python3 git jq node npm; do
   check_command "$command_name"
 done
 
+if command -v "${CODEX_BIN:-codex}" >/dev/null 2>&1; then
 expected_codex_version=$(awk -F'"' '/^codex_cli = / {print $2}' "$REPO_ROOT/paseo/versions.toml")
-actual_codex_version=$(codex --version 2>/dev/null | awk '{print $2}' || true)
+actual_codex_version=$("${CODEX_BIN:-codex}" --version 2>/dev/null | awk '{print $2}' || true)
 if [[ "$actual_codex_version" == "$expected_codex_version" ]]; then
   log "OK    Codex CLI    $actual_codex_version"
 else
   log "WARN  Codex CLI    expected $expected_codex_version; found ${actual_codex_version:-unknown}"
   warnings=$((warnings + 1))
 fi
+else
+  log "WARN  Codex CLI    optional; missing runtime will not block setup"
+  warnings=$((warnings + 1))
+fi
 
 if [[ -d "$HOME/.codex" ]]; then
   log "OK    Codex home   $HOME/.codex"
 else
-  log "FAIL  Codex home   $HOME/.codex is missing"
-  failures=$((failures + 1))
+  log "WARN  Codex home   optional; $HOME/.codex is missing"
+  warnings=$((warnings + 1))
 fi
 
-for resource in config.toml auth.json AGENTS.md hooks.json skills plugins; do
+for resource in config.toml auth.json AGENTS.md skills plugins; do
   if [[ -e "$HOME/.codex/$resource" ]]; then
     log "OK    shared       ~/.codex/$resource"
   else
-    log "WARN  shared       ~/.codex/$resource is missing; runtime sync will stop"
+    log "WARN  shared       ~/.codex/$resource is missing; setup skips Codex runtime generation"
     warnings=$((warnings + 1))
   fi
 done

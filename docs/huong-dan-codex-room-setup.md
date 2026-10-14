@@ -91,6 +91,14 @@ thay thế.
 dẫn chung, workspace protocol, launcher, và cấu hình Paseo. Script không ghi
 vào `~/.codex`.
 
+Codex không còn là prerequisite bắt buộc của setup. Khi thiếu CLI Codex hoặc
+`~/.codex/{config.toml,auth.json,AGENTS.md,skills,plugins}`, installer bỏ qua
+generation/verification của runtime Codex, giữ nguyên runtime đang có và vẫn
+cài đủ provider/launcher cho Codex, Claude và omp. Không gỡ hay tự đăng nhập
+Codex. Muốn dùng Codex sau này, chuẩn bị đủ prerequisite rồi chạy lại
+`./install --apply`. Catalog qua `CODEX_ROOM_MODEL_CATALOG` có thể thay CLI
+trong bước generation offline, nhưng không thay executable khi chạy agent.
+
 `codex-room-sync` đọc `~/.codex/config.toml` làm base, áp dụng các scalar được
 cho phép trong overlay, ghép chỉ dẫn của role, và sinh `config.toml` cùng model
 catalog riêng. Nó luôn tắt native Codex agents để Paseo giữ topology ba vai

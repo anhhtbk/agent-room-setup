@@ -43,10 +43,11 @@ Prerequisites:
 
 - macOS or another Unix-like environment with Bash, Python 3.11 or newer,
   Git, Node 22, npm, and jq.
-- Codex CLI installed and authenticated, with an existing `~/.codex/config.toml`,
-  `auth.json`, `AGENTS.md`, `skills/`, and `plugins/` available for runtime
-  sharing. `hooks.json` is optional: an existing file is shared, while an
-  absent file is skipped without creating anything in the operator home.
+- Optional: Codex CLI installed and authenticated, with an existing
+  `~/.codex/config.toml`, `auth.json`, `AGENTS.md`, `skills/`, and `plugins/`.
+  Without the CLI or any required shared resource, setup skips Codex runtime
+  generation and verification, preserving any existing runtime unchanged.
+  `hooks.json` remains optional.
 - `~/.local/bin` on `PATH`.
 - Optional: Claude Code (`claude`) and/or oh-my-pi (`omp`, 16.3.9 or newer)
   installed and logged in. Their `claude-*`/`omp-*` providers stay unavailable
@@ -62,8 +63,8 @@ cd codex-room-setup
 ```
 
 The root command preflights the pinned Paseo checkout, installs dependencies,
-builds the Paseo server/CLI bundles, renders managed HOME files, stages all
-three role runtimes, and publishes the complete transition with rollback on a
+builds the Paseo server/CLI bundles, renders managed HOME files, stages the
+three Codex role runtimes when prerequisites are available, and publishes the transition with rollback on a
 dependency, build, generation, or final verification failure. It does not
 install or authenticate Codex, touch `~/.codex`, start a daemon, or build
 Paseo Desktop. Start and reach the local provider daemon explicitly before
@@ -78,9 +79,17 @@ paseo daemon status
 `./install --verify` is read-only and fails when the live Paseo provider
 inventory cannot be reached. Use `scripts/verify` for an installed-only
 diagnostic while the daemon is stopped. Repeating `./install --apply` is the
-upgrade path: it regenerates the three managed runtimes, preserves operator
-Codex files and existing runtime/session data, and retires only recognized,
-unchanged legacy artifacts.
+upgrade path: when Codex prerequisites are available it regenerates the three
+managed runtimes, preserves operator Codex files and existing runtime/session
+data, and retires only recognized, unchanged legacy artifacts.
+
+Codex is not required to install the room or use Claude/omp. All nine provider
+definitions and their launchers remain installed; a definition alone does not
+make its runtime usable. To enable Codex later, install/authenticate it, provide
+the shared resources above, and rerun `./install --apply`. An explicit
+`CODEX_ROOM_MODEL_CATALOG` can supply the catalog offline without the CLI;
+launching Codex still requires its executable. Invalid available Codex inputs
+(for example a malformed catalog or dangling shared link) still fail closed.
 
 ## Disposable container acceptance test
 
