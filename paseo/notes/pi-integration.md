@@ -156,3 +156,12 @@ each build with that release's own modules, and the adapter stops a
 Paseo-started Supervisor/Lead session that has no `paseo` MCP server. Paseo's
 session extension is recognized by its `paseo-integration.mjs` file name, which
 is loaded into agent sessions but not into the capability probe.
+
+## Known limitation: third-party `pi-mcp-adapter` (2026-10-19)
+
+The operator's `~/.pi/agent` has the third-party `pi-mcp-adapter` npm package.
+It registers `--mcp-config` and `/mcp` too, so Pi refuses Room's adapter flag and
+skips builtin MCP; every `pi-*` role exits at startup on this machine. Human
+deferred it: Pi is unused for now, `~/.pi` stays unchanged, and neither the package
+nor Room's adapter is changed. Before using Pi again, decide whether to remove
+that package or make Room's adapter coexist with it.

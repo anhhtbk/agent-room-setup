@@ -66,6 +66,9 @@ start: the third-party `pi-mcp-adapter` npm package there also registers
 `--mcp-config` and `/mcp`, conflicting with Room's adapter and disabling
 builtin MCP. The `pi-*` lists were therefore shown with an empty temporary Pi
 agent directory. That conflict predates this change and is not fixed here.
+Human decision (2026-10-19): Pi is not in use for now; keep `~/.pi` unchanged,
+do not remove the package or change the adapter. Deferred until Human resumes
+Pi; that decision (remove the package or adapt Room's adapter) returns then.
 Base `omp` stays disabled by Paseo default; its list applies if enabled.
 
 ## Paseo latest-stable channel — technical ACCEPT (2026-10-19)

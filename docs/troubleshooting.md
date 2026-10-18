@@ -49,6 +49,11 @@ The operator's `~/.codex` is incomplete for this setup. Check the exact missing 
    Paseo tools the way Room's adapter expects, or `paseoTools`/`daemon.mcp` is
    disabled. `scripts/doctor` shows the release and the contract result. Pi Peer
    and the other runtimes keep working; update the Room adapter for that release.
+9. Every `pi-*` role fails with `Flag "--mcp-config" conflicts with
+   .../pi-mcp-adapter.mjs`: a third-party `pi-mcp-adapter` package in the Pi
+   agent directory registers the same flag and `/mcp`. Known limitation on the
+   operator machine (2026-10-19), deferred while Pi is unused; see
+   `paseo/notes/pi-integration.md`. Setup does not remove operator packages.
 
 ## Daemon PID and listener disagree
 
