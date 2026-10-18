@@ -4,3 +4,6 @@ Paseo's provider catalog controls selectable/default models in Paseo. The room r
 
 Keep the Paseo provider model ID, overlay `model`, and expected Codex catalog aligned. The sync script fails if Codex returns no models.
 
+The Paseo-visible model set is static for every runtime (Claude, omp, Pi, and
+Codex roles); see `docs/profiles-and-overlays.md` and `scripts/lib/paseo-models.jq`.
+

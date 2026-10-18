@@ -201,6 +201,33 @@ class PaseoReleaseTests(unittest.TestCase):
         config["agents"]["providers"]["future-provider"]["paseoTools"] = {"enabled": False}
         self.assertEqual(check(config), 0)
 
+    def test_model_set_verifier_accepts_only_room_models_with_selectable_thinking(self):
+        config = json.loads((ROOT / "home/.paseo/config.json.template").read_text())
+        def check(value):
+            return subprocess.run(["jq", "-e", "-f", str(ROOT / "scripts/lib/paseo-models.jq")],
+                                  input=json.dumps(value), text=True, capture_output=True).returncode
+        self.assertEqual(check(config), 0)
+        extra = {"id": "low", "label": "Low", "isDefault": True}
+        broken = {
+            "older Fable": lambda c: c["agents"]["providers"]["claude"]["models"][0].update(id="claude-fable-5"),
+            "omp on-device": lambda c: c["agents"]["providers"]["omp-lead"]["models"].append(
+                {"id": "apple/on-device", "label": "On device", "thinkingOptions": [extra]}),
+            "retired Codex Sol": lambda c: c["agents"]["providers"]["codex-peer"]["models"].append(
+                {"id": "gpt-5.6-sol", "label": "Sol", "thinkingOptions": [extra]}),
+            "Claude on Pi": lambda c: c["agents"]["providers"]["pi"]["models"].append(
+                {"id": "anthropic/claude-opus-5-5", "label": "Opus", "thinkingOptions": [extra]}),
+            "runtime catalog inherited": lambda c: c["agents"]["providers"]["pi-lead"].pop("models"),
+            "base Codex enabled": lambda c: c["agents"]["providers"]["codex"].update(enabled=True),
+            "two default models": lambda c: c["agents"]["providers"]["claude-lead"]["models"][1].update(isDefault=True),
+            "no default thinking": lambda c: [o.pop("isDefault", None) for o in
+                                              c["agents"]["providers"]["omp"]["models"][0]["thinkingOptions"]],
+        }
+        for name, mutate in broken.items():
+            with self.subTest(name):
+                value = json.loads(json.dumps(config))
+                mutate(value)
+                self.assertNotEqual(check(value), 0)
+
     def test_public_migration_rolls_back_fork_on_final_verification_failure(self):
         lifecycle = test_setup.PublicInstallTransactionTests()
         lifecycle.setUp()

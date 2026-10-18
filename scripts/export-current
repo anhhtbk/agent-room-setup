@@ -18,6 +18,7 @@ jq -e '
   die "installed Paseo config does not have the exact three-role contract per runtime"
 
 jq -e -f "$REPO_ROOT/scripts/lib/paseo-tools.jq" "$HOME/.paseo/config.json" >/dev/null || die "unexpected Paseo tool policy"
+jq -e -f "$REPO_ROOT/scripts/lib/paseo-models.jq" "$HOME/.paseo/config.json" >/dev/null || die "unexpected Paseo model set"
 
 export_one() {
   local source_path="$1"

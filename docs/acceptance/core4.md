@@ -37,6 +37,37 @@ customized or redirecting artifacts are preserved with a warning. Transaction
 backups are owner-only. The installer does not authenticate Codex, start the
 daemon, manage operator credentials, or install Desktop GUI state.
 
+## Room model set — technical ACCEPT (2026-10-19)
+
+Base: `a36a34e`. Human decision: Paseo lists only Claude Fable 5.1, Opus 5.5,
+Sonnet 5.5, GPT 6 Astra and GPT 6.1 Sol, within what each runtime can run, as a
+static list (no availability check). Defaults chosen by Human after Lead
+reported that omp (first catalog entry `anthropic/claude-3-5-sonnet-20240620`),
+Pi (operator setting `openai-codex/gpt-5.6-sol`) and base Codex fell outside the
+set: omp/`omp-*` default `anthropic/claude-opus-5-5` with runtime thinking `low`;
+`pi`/`pi-*` default `openai-codex/gpt-6.1-sol` Medium; base `codex` disabled
+because its runtime catalog has neither Astra nor Sol 6.1. Claude roles keep
+Claude Code's default Opus 5.5 (medium); `codex-*` keep overlay defaults.
+
+Evidence: an isolated Paseo v0.11.4 daemon (temporary home, port 6799, relay
+off; the operator daemon and `~/.paseo/config.json` untouched) loaded the
+rendered template and listed exactly — with thinking options and defaults —
+`claude`/`claude-lead`/`claude-peer`: the three Claude models; `codex-*`: Astra
+and Sol 6.1 (low…max); `omp-*` and temporarily enabled `omp`: the five prefixed
+models (auto, low…max); `pi` and `pi-*`: the two `openai-codex/` GPT models
+(minimal…max); base `codex` disabled. `paseo-models.jq` and `paseo-tools.jq`
+passed on the template; model-alignment against overlays passed;
+`./scripts/verify --source` `VERIFY_OK`; release, alignment and full suites below.
+
+Limits: models were listed, not run; Codex's runtime catalog on this machine does
+not list Astra/Sol 6.1, so their runnability on `codex-*` rests on the existing
+overlay, not this check. With the operator's real `~/.pi/agent`, `pi-*` cannot
+start: the third-party `pi-mcp-adapter` npm package there also registers
+`--mcp-config` and `/mcp`, conflicting with Room's adapter and disabling
+builtin MCP. The `pi-*` lists were therefore shown with an empty temporary Pi
+agent directory. That conflict predates this change and is not fixed here.
+Base `omp` stays disabled by Paseo default; its list applies if enabled.
+
 ## Paseo latest-stable channel — technical ACCEPT (2026-10-19)
 
 Base: `fb45d23fdfc7fffae1731056116dd1ad7899d69b`. Human decision: setup always

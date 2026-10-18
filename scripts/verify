@@ -286,6 +286,7 @@ for runtime in claude omp pi; do
   check "$runtime providers launch agent-room roles" room_provider_launches_role "$runtime"
 done
 check "exact Paseo tool boundary" jq -e -f "$REPO_ROOT/scripts/lib/paseo-tools.jq" "$config_template"
+check "exact Room model set with default thinking per model" jq -e -f "$REPO_ROOT/scripts/lib/paseo-models.jq" "$config_template"
 
 # Parse TOML, rather than matching text that might occur in instructions/tables.
 toml_python="${CODEX_ROOM_TOML_PYTHON:-}"

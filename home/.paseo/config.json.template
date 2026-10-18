@@ -60,14 +60,57 @@
         },
         "models": [
           {
-            "id": "gpt-6.1-sol",
-            "label": "Sol 6.1 Medium",
-            "isDefault": true,
+            "id": "gpt-6-astra",
+            "label": "GPT-6-Astra",
             "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
               {
                 "id": "medium",
                 "label": "Medium",
                 "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
               }
             ]
           }
@@ -91,46 +134,56 @@
         "models": [
           {
             "id": "gpt-6-astra",
-            "label": "Astra Low",
+            "label": "GPT-6-Astra",
             "thinkingOptions": [
               {
                 "id": "low",
                 "label": "Low",
                 "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
               }
             ]
           },
           {
             "id": "gpt-6.1-sol",
-            "label": "Sol 6.1 Medium",
+            "label": "GPT-6.1-Sol",
             "isDefault": true,
             "thinkingOptions": [
               {
-                "id": "medium",
-                "label": "Medium",
-                "isDefault": true
-              }
-            ]
-          },
-          {
-            "id": "gpt-5.6-sol",
-            "label": "Sol Medium",
-            "thinkingOptions": [
+                "id": "low",
+                "label": "Low"
+              },
               {
                 "id": "medium",
                 "label": "Medium",
                 "isDefault": true
-              }
-            ]
-          },
-          {
-            "id": "gpt-5.6-luna",
-            "label": "Luna Max",
-            "thinkingOptions": [
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
               {
                 "id": "max",
-                "label": "Max",
-                "isDefault": true
+                "label": "Max"
               }
             ]
           }
@@ -157,7 +210,72 @@
         "enabled": true,
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "models": [
+          {
+            "id": "openai-codex/gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6-astra",
+            "label": "GPT-6-Astra",
+            "thinkingOptions": [
+              {
+                "id": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          }
+        ]
       },
       "opencode": {
         "enabled": false,
@@ -199,24 +317,56 @@
         "models": [
           {
             "id": "gpt-6-astra",
-            "label": "Astra Medium",
+            "label": "GPT-6-Astra",
             "isDefault": true,
             "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
               {
                 "id": "medium",
                 "label": "Medium",
                 "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
               }
             ]
           },
           {
-            "id": "gpt-5.6-sol",
-            "label": "Sol Medium",
+            "id": "gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
             "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
               {
                 "id": "medium",
                 "label": "Medium",
                 "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
               }
             ]
           }
@@ -236,7 +386,103 @@
         ],
         "paseoTools": {
           "enabled": true
-        }
+        },
+        "models": [
+          {
+            "id": "claude-opus-5-5",
+            "label": "Opus 5.5",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          },
+          {
+            "id": "claude-fable-5-1",
+            "label": "Fable 5.1",
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High",
+                "isDefault": true
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          },
+          {
+            "id": "claude-sonnet-5-5",
+            "label": "Sonnet 5.5",
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          }
+        ]
       },
       "claude-lead": {
         "extends": "claude",
@@ -249,7 +495,103 @@
         ],
         "paseoTools": {
           "enabled": true
-        }
+        },
+        "models": [
+          {
+            "id": "claude-opus-5-5",
+            "label": "Opus 5.5",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          },
+          {
+            "id": "claude-fable-5-1",
+            "label": "Fable 5.1",
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High",
+                "isDefault": true
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          },
+          {
+            "id": "claude-sonnet-5-5",
+            "label": "Sonnet 5.5",
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          }
+        ]
       },
       "claude-peer": {
         "extends": "claude",
@@ -262,7 +604,103 @@
         ],
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "models": [
+          {
+            "id": "claude-opus-5-5",
+            "label": "Opus 5.5",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          },
+          {
+            "id": "claude-fable-5-1",
+            "label": "Fable 5.1",
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High",
+                "isDefault": true
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          },
+          {
+            "id": "claude-sonnet-5-5",
+            "label": "Sonnet 5.5",
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          }
+        ]
       },
       "omp-supervisor": {
         "extends": "omp",
@@ -275,7 +713,165 @@
         ],
         "paseoTools": {
           "enabled": true
-        }
+        },
+        "models": [
+          {
+            "id": "anthropic/claude-opus-5-5",
+            "label": "Claude Opus 5.5",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "anthropic/claude-fable-5-1",
+            "label": "Claude Fable 5.1",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "anthropic/claude-sonnet-5-5",
+            "label": "Claude Sonnet 5.5",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6-astra",
+            "label": "GPT-6-Astra",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          }
+        ]
       },
       "omp-lead": {
         "extends": "omp",
@@ -288,7 +884,165 @@
         ],
         "paseoTools": {
           "enabled": true
-        }
+        },
+        "models": [
+          {
+            "id": "anthropic/claude-opus-5-5",
+            "label": "Claude Opus 5.5",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "anthropic/claude-fable-5-1",
+            "label": "Claude Fable 5.1",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "anthropic/claude-sonnet-5-5",
+            "label": "Claude Sonnet 5.5",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6-astra",
+            "label": "GPT-6-Astra",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          }
+        ]
       },
       "omp-peer": {
         "extends": "omp",
@@ -301,7 +1055,165 @@
         ],
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "models": [
+          {
+            "id": "anthropic/claude-opus-5-5",
+            "label": "Claude Opus 5.5",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "anthropic/claude-fable-5-1",
+            "label": "Claude Fable 5.1",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "anthropic/claude-sonnet-5-5",
+            "label": "Claude Sonnet 5.5",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6-astra",
+            "label": "GPT-6-Astra",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          }
+        ]
       },
       "pi-supervisor": {
         "extends": "pi",
@@ -314,7 +1226,72 @@
         ],
         "paseoTools": {
           "enabled": true
-        }
+        },
+        "models": [
+          {
+            "id": "openai-codex/gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6-astra",
+            "label": "GPT-6-Astra",
+            "thinkingOptions": [
+              {
+                "id": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          }
+        ]
       },
       "pi-lead": {
         "extends": "pi",
@@ -327,7 +1304,72 @@
         ],
         "paseoTools": {
           "enabled": true
-        }
+        },
+        "models": [
+          {
+            "id": "openai-codex/gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6-astra",
+            "label": "GPT-6-Astra",
+            "thinkingOptions": [
+              {
+                "id": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          }
+        ]
       },
       "pi-peer": {
         "extends": "pi",
@@ -340,22 +1382,342 @@
         ],
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "models": [
+          {
+            "id": "openai-codex/gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6-astra",
+            "label": "GPT-6-Astra",
+            "thinkingOptions": [
+              {
+                "id": "minimal",
+                "label": "Minimal"
+              },
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          }
+        ]
       },
       "claude": {
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "models": [
+          {
+            "id": "claude-opus-5-5",
+            "label": "Opus 5.5",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          },
+          {
+            "id": "claude-fable-5-1",
+            "label": "Fable 5.1",
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High",
+                "isDefault": true
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          },
+          {
+            "id": "claude-sonnet-5-5",
+            "label": "Sonnet 5.5",
+            "thinkingOptions": [
+              {
+                "id": "low",
+                "label": "Low"
+              },
+              {
+                "id": "medium",
+                "label": "Medium",
+                "isDefault": true
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "Extra High"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              },
+              {
+                "id": "ultracode",
+                "label": "Ultra Code"
+              }
+            ]
+          }
+        ]
       },
       "codex": {
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "enabled": false
       },
       "omp": {
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "models": [
+          {
+            "id": "anthropic/claude-opus-5-5",
+            "label": "Claude Opus 5.5",
+            "isDefault": true,
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "anthropic/claude-fable-5-1",
+            "label": "Claude Fable 5.1",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "anthropic/claude-sonnet-5-5",
+            "label": "Claude Sonnet 5.5",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6-astra",
+            "label": "GPT-6-Astra",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          },
+          {
+            "id": "openai-codex/gpt-6.1-sol",
+            "label": "GPT-6.1-Sol",
+            "thinkingOptions": [
+              {
+                "id": "auto",
+                "label": "Auto"
+              },
+              {
+                "id": "low",
+                "label": "Low",
+                "isDefault": true
+              },
+              {
+                "id": "medium",
+                "label": "Medium"
+              },
+              {
+                "id": "high",
+                "label": "High"
+              },
+              {
+                "id": "xhigh",
+                "label": "XHigh"
+              },
+              {
+                "id": "max",
+                "label": "Max"
+              }
+            ]
+          }
+        ]
       }
     }
   },

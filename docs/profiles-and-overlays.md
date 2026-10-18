@@ -6,7 +6,18 @@ The word “profile” appears at three different levels:
 2. **Codex Room overlay:** a focused TOML fragment. Codex merges it into a generated `CODEX_HOME`; `agent-room` reads only its `developer_instructions` for Claude/omp/Pi.
 3. **Native Codex profile:** selected through `codex --profile`; this room does not use that mechanism.
 
-Changing a Paseo provider model affects the model picker and Paseo default. Changing an overlay affects the Codex process default after the next sync. Keep both aligned deliberately. Claude/omp/Pi role providers inherit their runtime's model catalog; an overlay's `developer_instructions` change reaches them on the next new session without a sync.
+Changing a Paseo provider model affects the model picker and Paseo default. Changing an overlay affects the Codex process default after the next sync. Keep both aligned deliberately. An overlay's `developer_instructions` change reaches Claude/omp/Pi roles on the next new session without a sync.
+
+Paseo shows a fixed Room model set (2026-10-19), declared as a static `models` list that replaces each runtime's discovered catalog; Paseo has no way to hide unusable models, and no runtime availability check is added:
+
+| Providers | Models (default first) | Thinking options (default) |
+| --- | --- | --- |
+| `claude`, `claude-*` | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5` | low…max, ultracode (Opus/Sonnet medium, Fable high) |
+| `omp-*` (and `omp` if enabled) | `anthropic/claude-opus-5-5`, `anthropic/claude-fable-5-1`, `anthropic/claude-sonnet-5-5`, `openai-codex/gpt-6-astra`, `openai-codex/gpt-6.1-sol` | auto, low…max (low) |
+| `pi`, `pi-*` | `openai-codex/gpt-6.1-sol`, `openai-codex/gpt-6-astra` (Pi's catalog has no Claude 5.x) | minimal…max (medium) |
+| `codex-*` | `gpt-6-astra`, `gpt-6.1-sol`; default per overlay | low…max (overlay effort; Peer Astra low) |
+
+Base `codex` is disabled: its runtime catalog offers neither Astra nor Sol 6.1. Thinking options and defaults are copied from the runtimes' own catalogs as of Paseo v0.11.4. `scripts/lib/paseo-models.jq` (run by `scripts/verify` and `scripts/export-current`) rejects other models, missing lists, or a model without exactly one default thinking option. When a runtime renames a model or its thinking levels, update the template and that check together.
 
 The selected defaults as of 2026-10-01 are Lead `gpt-6-astra` / `medium`,
 Supervisor and Peer `gpt-6.1-sol` / `medium`. This is an explicit operator
