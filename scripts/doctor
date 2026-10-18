@@ -85,14 +85,13 @@ esac
 
 paseo_checkout="${PASEO_REPO_DIR:-$HOME/projects/supervisors/paseo}"
 if [[ -d "$paseo_checkout/.git" ]]; then
-  log "OK    Paseo release   $paseo_checkout"
   paseo_branch=$(awk -F'"' '/^branch = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")
-  paseo_commit=$(awk -F'"' '/^verified_commit = / {print $2}' "$REPO_ROOT/paseo/source.toml")
   paseo_source=$(awk -F'"' '/^url = / {print $2}' "$REPO_ROOT/paseo/source.toml")
-  paseo_tag=$(awk -F'"' '/^release_tag = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")
-  actual_tag_commit=$(git -C "$paseo_checkout" rev-parse "refs/tags/$paseo_tag^{commit}" 2>/dev/null || true)
-  actual_branch=$(git -C "$paseo_checkout" branch --show-current)
+  paseo_release=$(git -C "$paseo_checkout" config --get codex-room.paseoRelease 2>/dev/null || true)
   actual_commit=$(git -C "$paseo_checkout" rev-parse HEAD)
+  log "OK    Paseo release   ${paseo_release:-unrecorded} ($actual_commit) at $paseo_checkout"
+  actual_tag_commit=$(git -C "$paseo_checkout" rev-parse "refs/tags/$paseo_release^{commit}" 2>/dev/null || true)
+  actual_branch=$(git -C "$paseo_checkout" branch --show-current)
   actual_origin=$(git -C "$paseo_checkout" remote get-url origin 2>/dev/null || true)
   tracking_remote=$(git -C "$paseo_checkout" config --get "branch.$paseo_branch.remote" || true)
   tracking_merge=$(git -C "$paseo_checkout" config --get "branch.$paseo_branch.merge" || true)
@@ -100,8 +99,7 @@ if [[ -d "$paseo_checkout/.git" ]]; then
 
   for check_pair in \
     "branch|$paseo_branch|$actual_branch" \
-    "commit|$paseo_commit|$actual_commit" \
-    "release-tag|$paseo_commit|$actual_tag_commit" \
+    "release-tag|$actual_commit|$actual_tag_commit" \
     "origin|$paseo_source|$actual_origin" \
     "tracking|origin|$tracking_remote" \
     "tracking-ref|refs/heads/$paseo_branch|$tracking_merge" \
@@ -114,6 +112,14 @@ if [[ -d "$paseo_checkout/.git" ]]; then
       warnings=$((warnings + 1))
     fi
   done
+  paseo_config="$HOME/.paseo/config.json"
+  [[ -f "$paseo_config" ]] || paseo_config="$REPO_ROOT/home/.paseo/config.json.template"
+  if contract_result=$(node "$REPO_ROOT/home/.config/codex-room/tools/paseo-pi-contract.mjs" "$paseo_checkout" "$paseo_config" 2>&1); then
+    log "OK    Pi contract  MCP delivery and tool policy hold on ${paseo_release:-this release}"
+  else
+    log "WARN  Pi contract  not verified on ${paseo_release:-this release}; Pi Supervisor/Lead sessions will refuse to start: $contract_result"
+    warnings=$((warnings + 1))
+  fi
 else
   log "WARN  Paseo release   not found at $paseo_checkout"
   warnings=$((warnings + 1))

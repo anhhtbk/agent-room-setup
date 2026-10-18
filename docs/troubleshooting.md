@@ -44,6 +44,11 @@ The operator's `~/.codex` is incomplete for this setup. Check the exact missing 
    Use `pi-lead` or `pi-supervisor` through Paseo for automatic orchestration
    delivery. Provider policy or `get_state` success alone does not prove tools
    arrived.
+8. `pi-supervisor`/`pi-lead` exits at startup with "started this Room ... session
+   without the paseo MCP server": the installed Paseo release no longer delivers
+   Paseo tools the way Room's adapter expects, or `paseoTools`/`daemon.mcp` is
+   disabled. `scripts/doctor` shows the release and the contract result. Pi Peer
+   and the other runtimes keep working; update the Room adapter for that release.
 
 ## Daemon PID and listener disagree
 

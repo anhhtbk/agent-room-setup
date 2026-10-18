@@ -4,15 +4,14 @@ set -euo pipefail
 PASEO_REPO_DIR="${PASEO_REPO_DIR:-@@HOME@@/projects/supervisors/paseo}"
 PASEO_HOME_DIR="${PASEO_HOME_DIR:-@@HOME@@/.paseo}"
 PASEO_SOURCE_URL="${PASEO_SOURCE_URL:-https://github.com/getpaseo/paseo.git}"
-PASEO_RELEASE_TAG="${PASEO_RELEASE_TAG:-v0.9.2}"
 PASEO_BRANCH="${PASEO_BRANCH:-main}"
-PASEO_VERIFIED_COMMIT="${PASEO_VERIFIED_COMMIT:-c67b7158b441bb09026b38d86ae335cc4b49190a}"
+ROOM_TOOLS="${CODEX_ROOM_TOOLS:-@@HOME@@/.config/codex-room/tools}"
 NPM_BIN="${PASEO_NPM_BIN:-npm}"
 INSTALLED_APP="${PASEO_INSTALLED_APP:-/Applications/Paseo.app}"
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
   print "Usage: paseo-local-update"
-  print "Validate the immutable pin, build, sign, and install Paseo Desktop."
+  print "Advance to the latest stable Paseo release, then build, sign, and install Desktop."
   exit 0
 fi
 [[ "$#" -eq 0 ]] || { print -u2 "Unknown argument: $1"; exit 2; }
@@ -26,10 +25,12 @@ cd "$PASEO_REPO_DIR"
 [[ "$(git config --get branch.$PASEO_BRANCH.merge 2>/dev/null || true)" == "refs/heads/$PASEO_BRANCH" ]] || { print -u2 "Unexpected tracking merge ref."; exit 1; }
 [[ "$(git remote | LC_ALL=C sort | tr '\n' ' ')" == "origin " ]] || { print -u2 "Unexpected additional or missing Paseo remotes."; exit 1; }
 [[ -z "$(git config --get core.hooksPath 2>/dev/null || true)" ]] || { print -u2 "Custom core.hooksPath is not safe for Paseo prepare."; exit 1; }
+
+# Resolve the newest published stable release once, then hold this tag->commit.
+resolved=$(PASEO_SOURCE_URL="$PASEO_SOURCE_URL" "$ROOM_TOOLS/paseo-release.py" resolve) || { print -u2 "Cannot resolve the latest stable Paseo release."; exit 1; }
+read -r PASEO_RELEASE_TAG PASEO_VERIFIED_COMMIT <<<"$resolved"
 [[ "$PASEO_RELEASE_TAG" =~ '^v[0-9]+\.[0-9]+\.[0-9]+$' ]] || { print -u2 "Paseo requires a stable release tag"; exit 1; }
-remote_refs=$(git ls-remote "$PASEO_SOURCE_URL" "refs/tags/$PASEO_RELEASE_TAG" "refs/tags/$PASEO_RELEASE_TAG^{}")
-remote_head=$(printf '%s\n' "$remote_refs" | awk '{if ($2 ~ /\^\{\}$/) peeled=$1; else tag=$1} END {print peeled ? peeled : tag}')
-[[ "$remote_head" == "$PASEO_VERIFIED_COMMIT" ]] || { print -u2 "Release tag does not match audited commit $PASEO_VERIFIED_COMMIT"; exit 1; }
+print "Latest stable Paseo: $PASEO_RELEASE_TAG ($PASEO_VERIFIED_COMMIT)"
 for hook in .git/hooks/*; do
   [[ -f "$hook" && "$hook" != *.sample ]] || continue
   grep -Eqi lefthook "$hook" || { print -u2 "Custom hook would be overwritten: $hook"; exit 1; }
@@ -37,18 +38,20 @@ done
 [[ -f package-lock.json ]] || { print -u2 "package-lock.json is missing"; exit 1; }
 
 git fetch --quiet --no-tags "$PASEO_SOURCE_URL" "refs/tags/$PASEO_RELEASE_TAG"
-[[ "$(git rev-parse 'FETCH_HEAD^{commit}')" == "$PASEO_VERIFIED_COMMIT" ]] || { print -u2 "Fetched release tag changed"; exit 1; }
+[[ "$(git rev-parse 'FETCH_HEAD^{commit}')" == "$PASEO_VERIFIED_COMMIT" ]] || { print -u2 "Release tag $PASEO_RELEASE_TAG moved during the update"; exit 1; }
 old_commit=$(git rev-parse HEAD)
 if [[ "$old_commit" != "$PASEO_VERIFIED_COMMIT" ]]; then
-  git merge-base --is-ancestor "$old_commit" "$PASEO_VERIFIED_COMMIT" || { print -u2 "Checkout is ahead or divergent from audited commit."; exit 1; }
+  git merge-base --is-ancestor "$old_commit" "$PASEO_VERIFIED_COMMIT" || { print -u2 "Checkout is ahead of or divergent from $PASEO_RELEASE_TAG; use ./install --apply for a transaction-backed replacement."; exit 1; }
   git update-ref "refs/heads/$PASEO_BRANCH" "$PASEO_VERIFIED_COMMIT" "$old_commit"
   if ! git restore --source="$PASEO_VERIFIED_COMMIT" --staged --worktree -- .; then
     git update-ref "refs/heads/$PASEO_BRANCH" "$old_commit" "$PASEO_VERIFIED_COMMIT"
     git restore --source="$old_commit" --staged --worktree -- .
-    print -u2 "Could not materialize audited fast-forward; restored prior commit."
+    print -u2 "Could not materialize the $PASEO_RELEASE_TAG fast-forward; restored prior commit."
     exit 1
   fi
 fi
+git update-ref "refs/tags/$PASEO_RELEASE_TAG" "$(git rev-parse FETCH_HEAD)"
+git config codex-room.paseoRelease "$PASEO_RELEASE_TAG"
 
 lock_before=$(shasum -a 256 package-lock.json | awk '{print $1}')
 lock_backup=$(mktemp "${TMPDIR:-/tmp}/paseo-lock.XXXXXX")
@@ -67,9 +70,15 @@ case "$(uname -m)" in
   x86_64) arch_flag=--x64; build_app="$PASEO_REPO_DIR/packages/desktop/release/mac/Paseo.app" ;;
   *) print -u2 "Unsupported architecture"; exit 1 ;;
 esac
-print "Building audited Paseo $PASEO_VERIFIED_COMMIT"
+print "Building Paseo $PASEO_RELEASE_TAG ($PASEO_VERIFIED_COMMIT)"
 CSC_IDENTITY_AUTO_DISCOVERY=false "$NPM_BIN" run build:desktop -- --publish never --mac "$arch_flag" --dir
 [[ -d "$build_app" ]] || { print -u2 "Desktop build not found: $build_app"; exit 1; }
+# Warning only (operator decision): Pi Supervisor/Lead sessions fail closed instead.
+if contract_result=$(node "$ROOM_TOOLS/paseo-pi-contract.mjs" "$PASEO_REPO_DIR" "$PASEO_HOME_DIR/config.json" 2>&1); then
+  print "Pi MCP/tool-policy contract holds on $PASEO_RELEASE_TAG."
+else
+  print -u2 "WARNING: Pi MCP/tool-policy contract is not verified on $PASEO_RELEASE_TAG; Pi Supervisor/Lead sessions will refuse to start: $contract_result"
+fi
 codesign --force --deep --sign - "$build_app"
 codesign --verify --deep --strict "$build_app"
 
@@ -88,4 +97,4 @@ ditto "$build_app" "$INSTALLED_APP"
 ln -sfn "$PASEO_REPO_DIR/packages/cli/bin/paseo" @@HOME@@/.local/bin/paseo
 "$PASEO_REPO_DIR/packages/cli/bin/paseo" daemon start --home "$PASEO_HOME_DIR" --listen 127.0.0.1:6767 --relay
 open "$INSTALLED_APP"
-print "Local Paseo update complete at audited commit $PASEO_VERIFIED_COMMIT."
+print "Local Paseo update complete at $PASEO_RELEASE_TAG ($PASEO_VERIFIED_COMMIT)."

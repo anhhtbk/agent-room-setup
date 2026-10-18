@@ -53,10 +53,13 @@ own login. Role policy is therefore per process:
   Explicit append flags disable Pi's implicit `APPEND_SYSTEM.md` discovery;
   operators can pass that file explicitly as another append.
 - **Pi MCP compatibility.** A room-managed `pi-mcp-adapter.mjs` implements
-  the pinned host's per-session `--mcp-config` protocol using Pi >=1.3.0's
+  the host's per-session `--mcp-config` protocol using Pi >=1.3.0's
   native MCP API. It retains the builtin MCP extension and preserves
   operator-owned configuration. This is separate from Paseo's prompt/history
-  extension, which does not deliver orchestration tools.
+  extension, which does not deliver orchestration tools. Because Paseo now
+  follows the latest stable release, the adapter also stops a Paseo-started
+  Supervisor/Lead session that arrives without the `paseo` MCP server, and
+  install/verify/doctor warn when a release fails the contract probe.
 - **Native subagents off.** Claude denies `Agent` and `Workflow`; omp sets
   `task.maxRecursionDepth: 0`, which removes its `task` tool. Delegation goes
   through Paseo roles, matching the Codex runtimes.

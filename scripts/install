@@ -130,6 +130,8 @@ done <<'EOF'
 .config/codex-room/tools/worktree-guard.py|.config/codex-room/tools/worktree-guard.py|755
 .config/codex-room/tools/run-procs.py|.config/codex-room/tools/run-procs.py|755
 .config/codex-room/tools/room-gc.py|.config/codex-room/tools/room-gc.py|755
+.config/codex-room/tools/paseo-release.py|.config/codex-room/tools/paseo-release.py|755
+.config/codex-room/tools/paseo-pi-contract.mjs|.config/codex-room/tools/paseo-pi-contract.mjs|755
 .local/bin/codex-room|.local/bin/codex-room|755
 .local/bin/codex-room-sync|.local/bin/codex-room-sync|755
 .local/bin/agent-room|.local/bin/agent-room|755

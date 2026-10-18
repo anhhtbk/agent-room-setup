@@ -1,24 +1,61 @@
 # Paseo stable release
 
 `./install --apply` owns the Paseo checkout and Room configuration transition.
-The authoritative source is [`paseo/source.toml`](../paseo/source.toml):
+The source of truth is [`paseo/source.toml`](../paseo/source.toml), which selects
+the `latest-stable` channel instead of a fixed version:
 
-- Official repository: `https://github.com/getpaseo/paseo.git`.
-- Stable release: [`v0.9.2`](https://github.com/getpaseo/paseo/releases/tag/v0.9.2) (previously v0.8.0; the review evidence below refers to v0.8.0).
-- Commit: `c67b7158b441bb09026b38d86ae335cc4b49190a` (annotated tag object `0f75f6f913aa06bf48c4c72b94483c0dc571abee`).
+- Official repository: `https://github.com/getpaseo/paseo.git` (no fork or mirror).
+- Release: the newest **published stable** GitHub release, resolved anew on each
+  `./install` (plan), `./install --apply`, and `scripts/update-paseo`. Drafts,
+  prereleases (`-beta`, `-rc`), and main are never chosen; the highest
+  `vMAJOR.MINOR.PATCH` wins, so a later-published backport cannot downgrade.
+  On 2026-10-19 that was `v0.11.4` (`dc5b02f7d7c120baea380d76def8b968020d8823`);
+  `v0.12.0-beta.3` was ignored.
 - Checkout: `~/projects/supervisors/paseo`, local branch `main`, only remote `origin`.
+
+Two installs at different times may install different versions. That is intended:
+the repository does not change for a new Paseo release.
 
 ## Release selection
 
-The installer fetches the named release tag and verifies its peeled commit against
-the pin. Both lightweight and annotated tags are supported. Beta/prerelease names,
-missing tags, and changed tag targets are refused before dependency installation.
-The fetched object is checked again to catch a tag moving after the remote lookup.
+`home/.config/codex-room/tools/paseo-release.py resolve` reads the release list
+and peels the chosen tag to a commit with `git ls-remote`. The coordinator does
+this once per install and passes that exact tag→commit pair to every later step.
+The helper re-checks the remote tag before dependency work and compares the
+fetched object again, so a tag moved mid-install is refused before publication.
+Lightweight and annotated tags are supported. `PASEO_RELEASE_TAG` and
+`PASEO_VERIFIED_COMMIT` cannot be supplied to the public installer.
 
-The local branch retains normal origin/main tracking, but install/update commands
-never pull or select the head of main. A newer main or a newer beta does not change
-the installed version. A newer stable release is adopted deliberately by updating
-the manifest and the installed updater template together, then validating it.
+The installed checkout records its release in `git config codex-room.paseoRelease`.
+The install plan, apply output, `scripts/verify`, and `scripts/doctor` show the
+release and commit, so operators know which Paseo is running. Verification checks
+that the checkout is exactly at that recorded tag.
+
+The local branch keeps normal origin/main tracking, but install/update never pull
+or select the head of main.
+
+## Pi compatibility with each release
+
+Room Pi roles depend on two Paseo interfaces a later release could change: the Pi
+provider delivering the per-session `paseo` MCP server to Room's
+`pi-mcp-adapter.mjs` (via `--mcp-config`, or Paseo's own builtin-MCP extension),
+and exact-provider `paseoTools` policy. Detection has two layers:
+
+1. After building, install/update runs `tools/paseo-pi-contract.mjs` against that
+   build. The release's own config schema and policy functions must give tools to
+   Supervisor/Lead only, and its Pi provider must deliver the `paseo` server with
+   caller identity and bearer header to a scripted Pi. No Pi install, model, or
+   daemon is used. `scripts/verify` and `scripts/doctor` repeat the check.
+2. A Paseo-started Pi Supervisor/Lead session that arrives without the `paseo`
+   MCP server exits 1 at startup with that reason instead of running without tools.
+
+Operator decision (2026-10-19): an incompatible release **is still installed**.
+Install, update, verify, and doctor print a warning and do not fail. Pi Peer,
+standalone `agent-room pi`, and the Codex, Claude, and omp runtimes are unaffected.
+Pi Supervisor/Lead sessions refuse to start until the Room adapter supports that
+release. v0.11.4 passes the contract: its Pi provider, MCP config, and tool-policy
+sources keep the v0.9.2 interface, and its new builtin-MCP path is preempted by
+Room's adapter signature.
 
 ## Installation and migration
 
@@ -30,8 +67,8 @@ publishing; dependency/build/runtime/final-verification failures restore that sn
 
 Existing official checkouts must be clean, on the expected branch, and use only
 the configured official `origin`. The public transaction backs up the checkout
-and makes the audited tag authoritative even when the current commit is ahead or
-divergent. The standalone helper accepts only the exact pin or an ancestor of it,
+and makes the selected release authoritative even when the current commit is ahead or
+divergent. The standalone helper accepts only that release or an ancestor of it,
 so a history replacement cannot occur without the coordinator's backup and
 rollback boundary. Untracked operator state is preserved.
 
@@ -70,17 +107,18 @@ This controls tool delivery, not what an agent with shell access can discover.
 
 ## Desktop
 
-`scripts/update-paseo` delegates to the installed `paseo-local-update`. It checks
-the same stable tag/commit, builds and signs Desktop, backs up the previous app,
-and restarts Paseo. Migrate the fork through `./install --apply` first. See
-[`paseo/notes/desktop-build.md`](../paseo/notes/desktop-build.md).
+`scripts/update-paseo` delegates to the installed `paseo-local-update`. It resolves
+the latest stable release the same way, fast-forwards to it, runs the Pi contract
+check (warning only), builds and signs Desktop, backs up the previous app, and
+restarts Paseo. Migrate the fork or a divergent checkout through `./install --apply`
+first. See [`paseo/notes/desktop-build.md`](../paseo/notes/desktop-build.md).
 
 The old fork bypassed bearer authentication for loopback clients even when the
 daemon had a password. Official Paseo requires that token when a password is set.
 The Room template does not configure a password; check Desktop/CLI connectivity
 if the daemon receives one through other settings.
 
-## Validation for this change (2026-09-15)
+## Historical validation of the v0.8.0 pin (2026-09-15)
 
 - GitHub release metadata confirms v0.8.0 is published, not draft/prerelease.
 - Real isolated `scripts/install-paseo --preflight`: PASS for v0.8.0, including

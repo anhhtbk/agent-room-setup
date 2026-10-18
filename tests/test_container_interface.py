@@ -62,14 +62,6 @@ class ContainerAcceptanceInterfaceTests(unittest.TestCase):
         self.assertIn('"$fake_home/.codex-runtime/peer"', self.accept)
         self.assertIn("installed launcher did not address each expected retained CODEX_HOME exactly once", self.accept)
 
-    def test_paseo_commit_comes_from_the_authoritative_manifest(self) -> None:
-        self.assertRegex(
-            self.accept,
-            r"expected_paseo_commit=\$\(awk .* \"\$source_root/paseo/source\.toml\"\)",
-        )
-        self.assertIn("verified_commit is missing or malformed", self.accept)
-        self.assertNotRegex(self.accept, r"\b8511089eaeb06cddd049b629562926822020de5c\b")
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,9 +1,10 @@
 [repository]
 url = "https://github.com/getpaseo/paseo.git"
-release_tag = "v0.9.2"
+# Each install/update resolves the newest published stable release (never a
+# draft, prerelease, or main) and pins its tag->commit for that one install.
+release_channel = "latest-stable"
+releases_api = "https://api.github.com/repos/getpaseo/paseo/releases"
 branch = "main"
-verified_commit = "c67b7158b441bb09026b38d86ae335cc4b49190a"
-verified_describe = "v0.9.2"
 
 [install]
 target = "~/projects/supervisors/paseo"

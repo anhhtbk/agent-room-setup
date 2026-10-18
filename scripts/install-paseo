@@ -6,23 +6,49 @@ preflight=false
 [[ "${1:-}" == "--preflight" ]] && preflight=true
 [[ "$#" -eq 0 || ( "$#" -eq 1 && "$1" == --preflight ) ]] || die "Usage: scripts/install-paseo [--preflight]"
 source_url="${PASEO_SOURCE_URL:-$(awk -F'"' '/^url = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")}"
-release_tag="${PASEO_RELEASE_TAG:-$(awk -F'"' '/^release_tag = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")}"
 target="${PASEO_REPO_DIR:-$HOME/projects/supervisors/paseo}"
 branch="${PASEO_BRANCH:-$(awk -F'"' '/^branch = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")}"
-verified_commit="${PASEO_VERIFIED_COMMIT:-$(awk -F'"' '/^verified_commit = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")}"
 cli_entrypoint="${PASEO_CLI_ENTRYPOINT:-packages/cli/bin/paseo}"
 cli_bundle="packages/cli/dist/index.js"
 server_bundle="packages/server/dist/scripts/supervisor-entrypoint.js"
 cli_link="${PASEO_CLI_LINK:-$HOME/.local/bin/paseo}"
 npm_bin="${PASEO_NPM_BIN:-npm}"
 coordinator_managed="${PASEO_COORDINATOR_MANAGED:-0}"
+room_tools="$REPO_ROOT/home/.config/codex-room/tools"
 require_command git
 require_command "$npm_bin"
-[[ "$verified_commit" =~ ^[0-9a-f]{40}$ ]] || die "invalid audited Paseo commit: $verified_commit"
+# The public coordinator resolves the release once and passes the pair; a
+# standalone run resolves the newest published stable release itself.
+release_tag="${PASEO_RELEASE_TAG:-}"
+verified_commit="${PASEO_VERIFIED_COMMIT:-}"
+if [[ -z "$release_tag" && -z "$verified_commit" ]]; then
+  resolved=$(PASEO_SOURCE_URL="$source_url" \
+    PASEO_RELEASES_API="${PASEO_RELEASES_API:-$(awk -F'"' '/^releases_api = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")}" \
+    "$room_tools/paseo-release.py" resolve) || die "cannot resolve the latest stable Paseo release"
+  read -r release_tag verified_commit <<<"$resolved"
+fi
+[[ "$verified_commit" =~ ^[0-9a-f]{40}$ ]] || die "invalid resolved Paseo commit: $verified_commit"
 [[ "$release_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "Paseo release tag must be stable vMAJOR.MINOR.PATCH"
 remote_refs=$(git ls-remote "$source_url" "refs/tags/$release_tag" "refs/tags/$release_tag^{}")
 remote_head=$(printf '%s\n' "$remote_refs" | awk '{if ($2 ~ /\^\{\}$/) peeled=$1; else tag=$1} END {print peeled ? peeled : tag}')
-[[ "$remote_head" == "$verified_commit" ]] || die "release $release_tag does not match audited commit (expected $verified_commit, found ${remote_head:-missing})"
+[[ "$remote_head" == "$verified_commit" ]] || die "release $release_tag moved since it was resolved (expected $verified_commit, found ${remote_head:-missing})"
+log "PASEO     stable $release_tag ($verified_commit)"
+
+# The checkout records which release it holds; verify/doctor read it back.
+record_release() {
+  git -C "$1" config codex-room.paseoRelease "$release_tag"
+}
+
+# Warning only (operator decision): Paseo still installs, and the Room Pi adapter
+# stops Supervisor/Lead sessions that arrive without Paseo tools.
+check_pi_contract() {
+  local repo="$1" result
+  if result=$(node "$room_tools/paseo-pi-contract.mjs" "$repo" "$REPO_ROOT/home/.paseo/config.json.template" 2>&1); then
+    log "OK    Pi MCP/tool-policy contract on Paseo $release_tag: $result"
+  else
+    warn "Pi MCP/tool-policy contract is not verified on Paseo $release_tag; Pi Supervisor/Lead sessions will refuse to start without Paseo tools: $result"
+  fi
+}
 
 check_hooks() {
   local repo="$1" hook
@@ -87,12 +113,14 @@ stage_exact() {
   git init -q "$destination"
   git -C "$destination" remote add origin "$source_url"
   git -C "$destination" fetch --quiet --no-tags origin "refs/tags/$release_tag:refs/tags/$release_tag"
-  [[ "$(git -C "$destination" rev-parse "FETCH_HEAD^{commit}")" == "$verified_commit" ]] || die "fetched Paseo object does not match audited commit"
+  [[ "$(git -C "$destination" rev-parse "FETCH_HEAD^{commit}")" == "$verified_commit" ]] || die "fetched Paseo object does not match resolved commit $verified_commit"
   git -C "$destination" checkout -q -b "$branch" "$verified_commit"
   git -C "$destination" config "branch.$branch.remote" origin
   git -C "$destination" config "branch.$branch.merge" "refs/heads/$branch"
+  record_release "$destination"
   npm_ci_checked "$destination"
   build_checked "$destination"
+  check_pi_contract "$destination"
   [[ -z "$(git -C "$destination" status --porcelain --untracked-files=no)" ]] || die "Paseo lifecycle changed tracked files"
 }
 
@@ -101,7 +129,7 @@ stage_history() {
   git init -q "$destination"
   git -C "$destination" remote add origin "$source_url"
   git -C "$destination" fetch --quiet --no-tags origin "refs/tags/$release_tag:refs/tags/$release_tag"
-  [[ "$(git -C "$destination" rev-parse "FETCH_HEAD^{commit}")" == "$verified_commit" ]] || die "fetched Paseo object does not match audited commit"
+  [[ "$(git -C "$destination" rev-parse "FETCH_HEAD^{commit}")" == "$verified_commit" ]] || die "fetched Paseo object does not match resolved commit $verified_commit"
 }
 
 validate_existing_target() {
@@ -142,7 +170,7 @@ validate_existing_target() {
     [[ "$fetched_existing" == "$old_commit" ]] || die "could not inspect existing Paseo HEAD without mutation"
     if ! git -C "$history_repo" merge-base --is-ancestor "$old_commit" "$verified_commit"; then
       [[ "$preflight" == true || "$coordinator_managed" == 1 ]] || \
-        die "Paseo checkout differs from audited tag; use ./install --apply for a transaction-backed replacement"
+        die "Paseo checkout differs from release $release_tag; use ./install --apply for a transaction-backed replacement"
     fi
   fi
 }
@@ -183,6 +211,9 @@ if [[ ! -e "$target" && ! -L "$target" ]]; then
   mv "$stage_root/checkout" "$target"
   publish_cli_link
   log "PASEO_RELEASE_READY"
+  log "path=$target"
+  log "release=$release_tag"
+  log "commit=$verified_commit"
   exit 0
 fi
 
@@ -191,14 +222,14 @@ trap 'rm -rf "$validation_root"' EXIT
 stage_history "$validation_root/history"
 validate_existing_target "$target" "$validation_root/history"
 git -C "$target" fetch --quiet --no-tags "$source_url" "refs/tags/$release_tag"
-[[ "$(git -C "$target" rev-parse "FETCH_HEAD^{commit}")" == "$verified_commit" ]] || die "fetched Paseo object does not match audited commit"
+[[ "$(git -C "$target" rev-parse "FETCH_HEAD^{commit}")" == "$verified_commit" ]] || die "fetched Paseo object does not match resolved commit $verified_commit"
 [[ "$(git -C "$target" rev-parse HEAD)" == "$old_commit" ]] || die "Paseo HEAD changed after validation; retry"
 if [[ "$old_commit" != "$verified_commit" ]]; then
   git -C "$target" update-ref "refs/heads/$branch" "$verified_commit" "$old_commit"
   if ! git -C "$target" restore --source="$verified_commit" --staged --worktree -- .; then
     git -C "$target" update-ref "refs/heads/$branch" "$old_commit" "$verified_commit"
     git -C "$target" restore --source="$old_commit" --staged --worktree -- .
-    die "could not materialize audited Paseo release"
+    die "could not materialize Paseo release $release_tag"
   fi
 fi
 if [[ "$remote_mode" != normalized ]]; then
@@ -213,10 +244,13 @@ fi
 git -C "$target" update-ref "refs/tags/$release_tag" "$(git -C "$target" rev-parse FETCH_HEAD)"
 git -C "$target" config "branch.$branch.remote" origin
 git -C "$target" config "branch.$branch.merge" "refs/heads/$branch"
+record_release "$target"
 npm_ci_checked "$target"
 build_checked "$target"
+check_pi_contract "$target"
 [[ -z "$(git -C "$target" status --porcelain --untracked-files=no)" ]] || die "Paseo lifecycle changed tracked files"
 publish_cli_link
 log "PASEO_RELEASE_READY"
 log "path=$target"
+log "release=$release_tag"
 log "commit=$(git -C "$target" rev-parse HEAD)"

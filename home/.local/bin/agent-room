@@ -17,7 +17,8 @@ Role policy is applied per process instead:
 * Pi: a separate additive ``--append-system-prompt`` supplies the role while
   Pi retains ownership of parsing host appends, files, and positional messages.
   Pi has no built-in subagent tool. Operator extensions remain operator-owned.
-  A Room extension translates Paseo's session MCP config into native Pi MCP.
+  A Room extension translates Paseo's session MCP config into native Pi MCP and
+  stops a Paseo Supervisor/Lead session that arrives without Paseo tools.
 * Native subagents are disabled (Claude ``Agent``/``Workflow`` tools; omp ``task``
   tool via a config overlay) so delegation goes through Paseo roles.
 
@@ -197,6 +198,7 @@ def main() -> None:
                 APPEND_FLAG, role_text,
                 "--extension", str(adapter), *args,
             ]
+            os.environ["AGENT_ROOM_ROLE"] = role
     elif is_session(args):
         args = claude_args(args, role) if first == "claude" else omp_args(args, role)
     os.execv(binary, [binary, *args])

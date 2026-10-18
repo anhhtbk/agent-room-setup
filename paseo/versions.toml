@@ -1,6 +1,6 @@
 [verified]
-paseo = "0.7.0-beta.1"
 codex_cli = "0.150.1"
 
-# Node and npm are intentionally not pinned here. Use the versions supported
-# by the release's package.json/package manager metadata.
+# Paseo is not pinned: each install/update resolves the latest stable release
+# (see source.toml). Node and npm are intentionally not pinned here either; use
+# the versions supported by the release's package.json/package manager metadata.

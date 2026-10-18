@@ -96,10 +96,13 @@ check "omp room overlay exists" test -f "$omp_overlay_path"
 check "omp room overlay removes native subagents" grep -Eq '^[[:space:]]+maxRecursionDepth: 0$' "$omp_overlay_path"
 check "workspace protocol exists" test -f "$workflow_root/WORKSPACE_PROTOCOL.md"
 check "Paseo provenance manifest exists" test -f "$REPO_ROOT/paseo/source.toml"
+check "Paseo manifest selects the latest stable channel" grep -Fxq 'release_channel = "latest-stable"' "$REPO_ROOT/paseo/source.toml"
+check "Paseo manifest carries no fixed release pin" bash -c '! grep -Eq "^(release_tag|verified_commit|verified_describe) =" "$1"' bash "$REPO_ROOT/paseo/source.toml"
 check "implement-spec Room mapping exists" test -f "$workflow_root/IMPLEMENT_SPEC.md"
-for tool in tree-audit.py worktree-guard.py run-procs.py room-gc.py; do
+for tool in tree-audit.py worktree-guard.py run-procs.py room-gc.py paseo-release.py paseo-pi-contract.mjs; do
   check "room tool $tool is executable" test -x "$tools_root/$tool"
 done
+check "Pi contract probe syntax" node --check "$tools_root/paseo-pi-contract.mjs"
 check "Lead routes specs to the global implement-spec skill" grep -Fq "~/.agents/skills/implement-spec/SKILL.md" "$overlays_root/lead.config.toml"
 check "Lead reads the Room implement-spec mapping" grep -Fq "workflow/IMPLEMENT_SPEC.md" "$overlays_root/lead.config.toml"
 check "writable Peers are capped at three" grep -Fq "three at once" "$workflow_root/WORKSPACE_PROTOCOL.md"
@@ -349,17 +352,27 @@ PY
     (cd "$paseo_checkout" && "./packages/cli/bin/paseo" --help >/dev/null 2>&1)
   }
   check "Paseo CLI --help runs" paseo_cli_help
-  expected_paseo_commit=$(awk -F'"' '/^verified_commit = / {print $2}' "$REPO_ROOT/paseo/source.toml")
   expected_paseo_branch=$(awk -F'"' '/^branch = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")
   expected_paseo_source=$(awk -F'"' '/^url = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")
-  check "Paseo checkout commit" test "$(git -C "$paseo_checkout" rev-parse HEAD 2>/dev/null || true)" = "$expected_paseo_commit"
+  # Any stable release may be installed; the checkout must hold the release it records.
+  installed_paseo_release=$(git -C "$paseo_checkout" config --get codex-room.paseoRelease 2>/dev/null || true)
+  installed_paseo_commit=$(git -C "$paseo_checkout" rev-parse HEAD 2>/dev/null || true)
+  check "Paseo records a stable release" bash -c '[[ "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]' bash "$installed_paseo_release"
+  check "Paseo checkout is at its recorded release tag" test \
+    "$(git -C "$paseo_checkout" rev-parse "refs/tags/$installed_paseo_release^{commit}" 2>/dev/null || true)" = "$installed_paseo_commit"
+  log "INFO  Paseo release ${installed_paseo_release:-unknown} (commit ${installed_paseo_commit:-unknown})"
   check "Paseo checkout branch" test "$(git -C "$paseo_checkout" branch --show-current 2>/dev/null || true)" = "$expected_paseo_branch"
   check "Paseo origin is official source" test "$(git -C "$paseo_checkout" remote get-url origin 2>/dev/null || true)" = "$expected_paseo_source"
   check "Paseo branch tracks origin" test "$(git -C "$paseo_checkout" config --get "branch.$expected_paseo_branch.remote" 2>/dev/null || true)" = origin
   check "Paseo tracking ref" test "$(git -C "$paseo_checkout" config --get "branch.$expected_paseo_branch.merge" 2>/dev/null || true)" = "refs/heads/$expected_paseo_branch"
-  expected_paseo_tag=$(awk -F'"' '/^release_tag = / {print $2; exit}' "$REPO_ROOT/paseo/source.toml")
-  check "Paseo stable release tag" test "$(git -C "$paseo_checkout" rev-parse "refs/tags/$expected_paseo_tag^{commit}" 2>/dev/null || true)" = "$expected_paseo_commit"
   check "Paseo remote set" test "$(git -C "$paseo_checkout" remote)" = origin
+  # Warning only (operator decision); Pi Supervisor/Lead sessions fail closed instead.
+  if contract_result=$(node "$tools_root/paseo-pi-contract.mjs" "$paseo_checkout" "$config_template" 2>&1); then
+    log "OK    Pi MCP/tool-policy contract on Paseo $installed_paseo_release"
+  else
+    log "WARN  Pi MCP/tool-policy contract is not verified on Paseo ${installed_paseo_release:-unknown}: $contract_result"
+    log "WARN  Pi Supervisor/Lead sessions will refuse to start until Room supports this release"
+  fi
   runtime_root="${CODEX_ROOM_RUNTIME_ROOT:-$HOME/.codex-runtime}"
   if [[ "$codex_enabled" == true ]]; then
   for role in supervisor lead peer; do

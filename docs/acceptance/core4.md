@@ -16,7 +16,7 @@ paseo daemon start
 ./install --verify
 ```
 
-The first command is read-only. Apply stages the pinned Paseo checkout, the
+The first command is read-only. Apply stages the latest stable Paseo checkout, the
 managed HOME files, and, when Codex prerequisites are available, the Supervisor,
 Lead, and Peer Codex runtimes as one transaction. Verification is read-only and includes the live provider
 inventory, so it requires a reachable Paseo daemon. `scripts/verify` and the
@@ -36,6 +36,57 @@ runtime directories. Only recognized, unchanged obsolete artifacts are retired;
 customized or redirecting artifacts are preserved with a warning. Transaction
 backups are owner-only. The installer does not authenticate Codex, start the
 daemon, manage operator credentials, or install Desktop GUI state.
+
+## Paseo latest-stable channel — technical ACCEPT (2026-10-19)
+
+Base: `fb45d23fdfc7fffae1731056116dd1ad7899d69b`. Human decision: setup always
+installs the newest published stable Paseo release instead of the v0.9.2 pin,
+and two installs may yield different versions. Human chose the reaction to a
+release that breaks the Pi contract: **install anyway with a warning**;
+install/update/verify/doctor only warn, Pi Supervisor/Lead fail at startup with
+the reason, and Pi Peer, Codex, Claude and omp are unaffected. Lead implemented
+directly (no Peer dispatch). Commit is local only; push needs separate approval.
+
+Kept protections: official source only, tag→commit resolved once and re-checked
+before dependency work and after fetch, staging plus transaction rollback,
+release recorded in `git config codex-room.paseoRelease` and shown by plan,
+apply, verify and doctor. Public installer refuses `PASEO_RELEASE_TAG` /
+`PASEO_VERIFIED_COMMIT` overrides.
+
+Evidence (actual results):
+
+- Official release list on 2026-10-19: latest stable `v0.11.4`
+  (`dc5b02f7d7c120baea380d76def8b968020d8823`); `v0.12.0-beta.1..3` ignored.
+  `paseo-release.py resolve` printed exactly that pair.
+- v0.11.4 source vs v0.9.2: `paseo-tool-policy.ts` and `runtime-mcp-config.ts`
+  identical; Pi argv construction unchanged; adapter predicate still precedes
+  the new builtin-MCP path. Provider schema now accepts `options` (old `params`
+  remains supported until 2027-03-30).
+- Real isolated `scripts/install-paseo --preflight` (temporary HOME/npm cache,
+  official source): resolved v0.11.4, `npm ci`, `build:server:clean`, CLI help,
+  then `PI_CONTRACT_OK policy=exact-id delivery=paseo-mcp`; `PASEO_PREFLIGHT_OK`,
+  exit 0, about 160 s.
+- Real v0.11.4 `PiRpcAgentClient` + production `agent-room` + real Pi 1.3.0,
+  loopback MCP fixture, no model: Lead and Supervisor started and the fixture
+  saw `initialize`/`tools/list` with caller and bearer; Lead with no delivered
+  `paseo` server exited 1 with "started this Room lead session without the paseo
+  MCP server"; Peer without injection started. Standalone `agent-room pi lead`
+  RPC `get_state` succeeded.
+- `python3 -m unittest discover -s tests`: **134 tests OK** (177.5 s), offline
+  with local Git/release fixtures: newer main/beta/draft ignored, highest
+  version wins, listed-but-untagged and prerelease/draft-only metadata refused,
+  coordinator-resolved tag moved before lookup refused, tag moved between
+  lookup and fetch refused, annotated tags, fork migration and rollback,
+  updater fast-forward and moved-tag refusal, recorded release, warning-only
+  contract in verify, override refusal.
+- `./scripts/verify --source`: `VERIFY_OK`; shell/zsh/Node/Python syntax and
+  `git diff --check` passed.
+
+Not exercised: a full `./install --apply` into a temporary HOME with the real
+v0.11.4 build, Desktop build/sign/replace via `paseo-local-update`, a live
+daemon with a model-driven Pi tool call, and Docker container acceptance. A
+future release failing the contract was simulated only by withholding delivery,
+not by a real incompatible release.
 
 ## Pi integration — technical ACCEPT (2026-10-18)
 

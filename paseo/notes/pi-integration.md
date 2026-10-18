@@ -139,3 +139,20 @@ Implementation and acceptance evidence after the original research snapshot
 are maintained in [the core acceptance record](../../docs/acceptance/core4.md).
 The original no-model discovery research above is not, by itself, proof of
 tool delivery, execution or resume.
+
+## Paseo latest-stable channel (2026-10-19)
+
+The v0.9.2 source links above remain the research baseline. Paseo is no longer
+pinned; setup installs the newest stable release. At v0.11.4
+(`dc5b02f7d7c120baea380d76def8b968020d8823`) the Room-relevant interface is
+unchanged from v0.9.2: `paseo-tool-policy.ts` and `runtime-mcp-config.ts` are
+byte-identical, `buildPiLaunch` still appends `--mcp-config`/`--extension`, and
+the adapter predicate (`mcp(:\d+)?` from an extension whose `sourceInfo`
+contains `pi-mcp-adapter`) is checked before the new builtin-MCP path, so Room's
+`mcp:1` keeps the `--mcp-config` delivery with `auth:false`/`oauth:false`.
+
+Because a later release can change this, `tools/paseo-pi-contract.mjs` checks
+each build with that release's own modules, and the adapter stops a
+Paseo-started Supervisor/Lead session that has no `paseo` MCP server. Paseo's
+session extension is recognized by its `paseo-integration.mjs` file name, which
+is loaded into agent sessions but not into the capability probe.

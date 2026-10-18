@@ -91,6 +91,16 @@ thay thế.
 dẫn chung, workspace protocol, launcher, và cấu hình Paseo. Script không ghi
 vào `~/.codex`.
 
+Paseo không còn pin cố định: mỗi lần `./install`/`--apply` và
+`scripts/update-paseo` tự chọn release **stable mới nhất** đã publish của repo
+chính thức `getpaseo/paseo` (bỏ qua draft/prerelease/main), giữ đúng cặp
+tag→commit đó suốt lần cài và từ chối nếu tag bị đổi giữa chừng. Release đã cài
+được ghi vào `git config codex-room.paseoRelease` và hiện trong plan, verify,
+doctor. Nếu release mới phá contract MCP/tool policy của Pi, Paseo vẫn được cài
+kèm cảnh báo; khi đó Pi Supervisor/Lead dừng ngay lúc khởi động và báo lý do,
+còn Pi Peer, Codex, Claude, omp không bị ảnh hưởng. Chi tiết:
+[`docs/paseo-release.md`](paseo-release.md).
+
 Codex không còn là prerequisite bắt buộc của setup. Khi thiếu CLI Codex hoặc
 `~/.codex/{config.toml,auth.json,AGENTS.md,skills,plugins}`, installer bỏ qua
 generation/verification của runtime Codex, giữ nguyên runtime đang có và vẫn

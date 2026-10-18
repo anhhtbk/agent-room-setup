@@ -279,10 +279,11 @@ assert prompts[0].startswith("Room role: Supervisor.") and prompts[1] == "host-p
 assert "--config" not in pi, pi
 PY
 
-expected_paseo_commit=$(awk -F'"' '/^verified_commit = / {print $2; exit}' "$source_root/paseo/source.toml")
-[[ "$expected_paseo_commit" =~ ^[0-9a-f]{40}$ ]] || fail "paseo/source.toml verified_commit is missing or malformed"
+installed_paseo_release=$(git -C "$paseo_checkout" config --get codex-room.paseoRelease || true)
+[[ "$installed_paseo_release" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Paseo checkout does not record a stable release: ${installed_paseo_release:-missing}"
 actual_paseo_commit=$(git -C "$paseo_checkout" rev-parse HEAD)
-[[ "$actual_paseo_commit" == "$expected_paseo_commit" ]] || fail "Paseo checkout commit mismatch: expected $expected_paseo_commit, found $actual_paseo_commit"
+expected_paseo_commit=$(git ls-remote "$PASEO_SOURCE_URL" "refs/tags/$installed_paseo_release^{}" | awk '{print $1}')
+[[ "$actual_paseo_commit" == "$expected_paseo_commit" ]] || fail "Paseo checkout commit mismatch: $installed_paseo_release is $expected_paseo_commit, found $actual_paseo_commit"
 
 printf 'ROLE_INVENTORY %s\n' "$provider_inventory"
 printf 'MCP_RECIPIENTS %s\n' "$mcp_inventory"

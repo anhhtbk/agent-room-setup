@@ -30,6 +30,7 @@ HOME_MIRROR = ROOT / "home"
 SYNC_SOURCE = HOME_MIRROR / ".local" / "bin" / "codex-room-sync"
 VERIFY_SOURCE = ROOT / "scripts" / "verify"
 PASEO_SOURCE = ROOT / "scripts" / "install-paseo"
+PASEO_RELEASE_SOURCE = ROOT / "home" / ".config" / "codex-room" / "tools" / "paseo-release.py"
 LEGACY_SOURCE_ROOT = ROOT / "paseo" / "legacy"
 
 ROLES = ("supervisor", "lead", "peer")
@@ -131,6 +132,8 @@ MANAGED_FILES = (
     (".config/codex-room/tools/worktree-guard.py", ".config/codex-room/tools/worktree-guard.py", 0o755),
     (".config/codex-room/tools/run-procs.py", ".config/codex-room/tools/run-procs.py", 0o755),
     (".config/codex-room/tools/room-gc.py", ".config/codex-room/tools/room-gc.py", 0o755),
+    (".config/codex-room/tools/paseo-release.py", ".config/codex-room/tools/paseo-release.py", 0o755),
+    (".config/codex-room/tools/paseo-pi-contract.mjs", ".config/codex-room/tools/paseo-pi-contract.mjs", 0o755),
     (".local/bin/codex-room", ".local/bin/codex-room", 0o755),
     (".local/bin/codex-room-sync", ".local/bin/codex-room-sync", 0o755),
     (".local/bin/agent-room", ".local/bin/agent-room", 0o755),
@@ -395,22 +398,36 @@ def parse_manifest() -> dict[str, str]:
             values[f"{section}.{key}"] = value[1:-1]
     required = (
         "repository.url",
-        "repository.release_tag",
+        "repository.release_channel",
+        "repository.releases_api",
         "repository.branch",
-        "repository.verified_commit",
         "install.target",
         "install.cli_entrypoint",
     )
     for key in required:
         if not values.get(key):
             fail(f"Paseo manifest is missing {key}")
-    if len(values["repository.verified_commit"]) != 40 or any(
-        character not in "0123456789abcdef" for character in values["repository.verified_commit"]
-    ):
-        fail("Paseo manifest verified_commit is not a lowercase 40-character SHA")
-    if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", values["repository.release_tag"]):
-        fail("Paseo manifest must select a stable release tag")
+    if values["repository.release_channel"] != "latest-stable":
+        fail("Paseo manifest must select the latest-stable release channel")
     return values
+
+
+def resolve_latest_stable(source: str, manifest: dict[str, str]) -> tuple[str, str]:
+    """Resolve once; the helper re-checks this tag->commit before and after fetch."""
+    environment = os.environ.copy()
+    environment["PASEO_SOURCE_URL"] = source
+    environment.setdefault("PASEO_RELEASES_API", manifest["repository.releases_api"])
+    completed = subprocess.run(
+        [sys.executable, str(PASEO_RELEASE_SOURCE), "resolve"],
+        env=environment, capture_output=True, text=True,
+    )
+    if completed.returncode:
+        fail(completed.stderr.strip() or "cannot resolve the latest stable Paseo release")
+    fields = completed.stdout.split()
+    if len(fields) != 2 or not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", fields[0]) \
+            or not re.fullmatch(r"[0-9a-f]{40}", fields[1]):
+        fail(f"unexpected Paseo release resolution: {completed.stdout.strip()}")
+    return fields[0], fields[1]
 
 
 def configured_paths(home: Path, manifest: dict[str, str]) -> dict[str, Path | str]:
@@ -427,16 +444,16 @@ def configured_paths(home: Path, manifest: dict[str, str]) -> dict[str, Path | s
         target = Path.cwd() / target
     if not cli_link.is_absolute():
         cli_link = Path.cwd() / cli_link
-    manifest_commit = manifest["repository.verified_commit"]
-    configured_commit = os.environ.get("PASEO_VERIFIED_COMMIT")
-    if configured_commit is not None and configured_commit != manifest_commit:
-        fail("refusing to override the immutable Paseo commit from paseo/source.toml")
-    commit = manifest_commit
+    for variable in ("PASEO_RELEASE_TAG", "PASEO_VERIFIED_COMMIT"):
+        if variable in os.environ:
+            fail(f"refusing {variable}: the installer always selects the latest stable Paseo release")
+    source = os.environ.get("PASEO_SOURCE_URL", manifest["repository.url"])
+    release_tag, commit = resolve_latest_stable(source, manifest)
     return {
         "paseo_target": target,
         "paseo_cli": cli_link,
-        "source": os.environ.get("PASEO_SOURCE_URL", manifest["repository.url"]),
-        "release_tag": manifest["repository.release_tag"],
+        "source": source,
+        "release_tag": release_tag,
         "branch": os.environ.get("PASEO_BRANCH", manifest["repository.branch"]),
         "commit": commit,
         "cli_entrypoint": os.environ.get("PASEO_CLI_ENTRYPOINT", manifest["install.cli_entrypoint"]),
@@ -1103,7 +1120,7 @@ def print_plan(home: Path) -> int:
     manifest = parse_manifest()
     paths = configured_paths(home, manifest)
     out("CODEX ROOM INSTALL PLAN (read-only; no filesystem publication)")
-    out(f"PREFLIGHT  Paseo stable {paths['release_tag']} ({paths['commit']}) from {paths['source']}")
+    out(f"PREFLIGHT  Paseo latest stable {paths['release_tag']} ({paths['commit']}) from {paths['source']}")
     out(f"PASEO     checkout {paths['paseo_target']}")
     out(f"PASEO     CLI link {paths['paseo_cli']}")
     out("INSTALL   managed HOME files:")

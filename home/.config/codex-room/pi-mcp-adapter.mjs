@@ -2,6 +2,10 @@ import { readFileSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { getAgentDir, VERSION } from "@earendil-works/pi-coding-agent";
 
+const ORCHESTRATOR_ROLES = new Set(["supervisor", "lead"]);
+// Paseo writes its per-session extension to <tmp>/paseo-pi-extension-*/paseo-integration.mjs.
+const PASEO_SESSION_EXTENSION = /(^|[\\/])paseo-integration\.mjs$/;
+
 // Pi catches extension errors and can continue without tools. This protocol must
 // instead stop the session: a warning is not successful Paseo tool delivery.
 function fail(message) {
@@ -71,29 +75,22 @@ export default function piMcpAdapter(pi) {
     },
   });
 
-  pi.on("session_start", (_event, ctx) => {
-    const builtin = pi.getCommands().some((command) => command.sourceInfo?.path === "builtin:mcp");
-    if (!builtin) {
-      fail("native builtin:mcp is disabled or replaced; enable it and remove extensions registering /mcp");
-    }
-    const path = pi.getFlag("mcp-config");
-    if (path === undefined) return; // Paseo capability probe or a standalone Room session.
-    if (typeof path !== "string" || !path) fail("--mcp-config requires a file path");
-
-    const servers = readServers(path);
-    const entries = Object.entries(servers);
-    if (entries.some(([, config]) => !isRecord(config))) fail("MCP server entries must be objects");
-    const injected = entries.filter(([name, config]) => isInjectedPaseo(name, config));
-    if (injected.length) {
-      const nativeFiles = [join(getAgentDir(), "mcp.json")];
-      if (ctx.isProjectTrusted()) nativeFiles.push(join(ctx.cwd, ".pi", "mcp.json"));
-      for (const nativeFile of nativeFiles) {
-        const nativeNames = Object.keys(readServers(nativeFile, true));
-        if (injected.some(([name]) => nativeNames.some((native) => namespace(native) === namespace(name)))) {
-          fail("native mcp.json shadows the session Paseo server; resolve the conflicting native entry before launching");
-        }
+  function assertNotShadowed(names, ctx) {
+    const nativeFiles = [join(getAgentDir(), "mcp.json")];
+    if (ctx.isProjectTrusted()) nativeFiles.push(join(ctx.cwd, ".pi", "mcp.json"));
+    for (const nativeFile of nativeFiles) {
+      const nativeNames = Object.keys(readServers(nativeFile, true));
+      if (names.some((name) => nativeNames.some((native) => namespace(native) === namespace(name)))) {
+        fail("native mcp.json shadows the session Paseo server; resolve the conflicting native entry before launching");
       }
     }
+  }
+
+  function registerSessionServers(path, ctx) {
+    if (typeof path !== "string" || !path) fail("--mcp-config requires a file path");
+    const entries = Object.entries(readServers(path));
+    if (entries.some(([, config]) => !isRecord(config))) fail("MCP server entries must be objects");
+    assertNotShadowed(entries.filter(([name, config]) => isInjectedPaseo(name, config)).map(([name]) => name), ctx);
 
     // Read anew on resume/reload/new sessions; never retain another session's URL
     // or token. Native mcp.json precedence remains unchanged for operator servers.
@@ -110,6 +107,30 @@ export default function piMcpAdapter(pi) {
         fail("session MCP server registration failed; check server configuration and extension namespace conflicts");
       }
       registered.add(name);
+    }
+  }
+
+  pi.on("session_start", (_event, ctx) => {
+    const commands = pi.getCommands();
+    if (!commands.some((command) => command.sourceInfo?.path === "builtin:mcp")) {
+      fail("native builtin:mcp is disabled or replaced; enable it and remove extensions registering /mcp");
+    }
+    const path = pi.getFlag("mcp-config");
+    // No flag: a Paseo capability probe, a standalone Room session, or a Paseo
+    // release that delivers through its own extension (checked below).
+    if (path !== undefined) registerSessionServers(path, ctx);
+
+    // Paseo loads its session extension only into agent sessions, never into
+    // its capability probe. Supervisor/Lead agent sessions must have Paseo tools;
+    // an incompatible Paseo release would otherwise launch them silently without.
+    const paseoSession = commands.some((command) => PASEO_SESSION_EXTENSION.test(command.sourceInfo?.path ?? ""));
+    if (paseoSession && ORCHESTRATOR_ROLES.has(process.env.AGENT_ROOM_ROLE)) {
+      const delivered = pi.getMcpServers().map(({ name }) => name).filter((name) => namespace(name) === "paseo");
+      if (!delivered.length) {
+        fail(`Paseo started this Room ${process.env.AGENT_ROOM_ROLE} session without the paseo MCP server; `
+          + "the installed Paseo release is incompatible with Room Pi tool delivery, or paseoTools/daemon.mcp is disabled");
+      }
+      assertNotShadowed(delivered, ctx);
     }
   });
 }

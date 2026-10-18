@@ -119,15 +119,23 @@ repeatability, preservation, and real Paseo daemon startup with a provider RPC.
 Authenticated Codex sessions, Paseo Desktop/GUI behavior, and macOS
 signing/TCC/application restart remain operator checks.
 
-The Paseo source manifest pins official stable release **v0.9.2** and its immutable commit.
-It never installs a daily main build or beta. See [release selection and fork migration](docs/paseo-release.md). The public installer
+Each install resolves the newest published **stable** Paseo release from the
+official repository (currently v0.11.4) and holds that tag→commit for the whole
+install; drafts, prereleases, and main are never installed, and the repository
+needs no change for a new release. The plan, apply, verify, and doctor output show
+the installed release. See [release selection, Pi compatibility, and fork
+migration](docs/paseo-release.md). The public installer
 preflights Paseo in a disposable location before changing live state. Paseo uses
-`npm ci` and refuses custom Git hooks because its audited `prepare` lifecycle
-installs lefthook. The public transaction makes the audited tag authoritative for
+`npm ci` and refuses custom Git hooks because its `prepare` lifecycle
+installs lefthook. The public transaction makes the selected release authoritative for
 a clean checkout on the configured branch and official origin, including when
 the checkout is ahead or divergent; the standalone helper remains
 fast-forward-only. The recognized old Room fork is migrated once inside the
 backed-up install transaction.
+
+If a new stable release breaks the Pi MCP delivery or tool-policy contract, it is
+still installed with a warning; Pi Supervisor/Lead sessions then refuse to start
+with that reason, while Pi Peer and the Codex, Claude, and omp roles keep working.
 
 The installer backs up every replaced managed file and the Paseo checkout under
 `~/.codex-room-backups/core3-<UTC timestamp>-<pid>-<nanoseconds>/` with
@@ -153,8 +161,8 @@ paseo daemon status
 paseo-local-update
 ```
 
-That command validates provenance and hook/lock safety, advances only to the
-audited commit, runs `npm ci`, builds and ad-hoc signs the local Desktop app,
+That command validates provenance and hook/lock safety, fast-forwards to the
+latest stable release, runs `npm ci`, builds and ad-hoc signs the local Desktop app,
 backs up the prior `/Applications/Paseo.app`, installs the new build, and
 restarts Paseo.
 
