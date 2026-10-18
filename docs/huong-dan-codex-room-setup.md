@@ -1,7 +1,7 @@
 # Hướng dẫn `codex-room-setup`
 
-Tài liệu này giải thích cách bộ setup tạo một phòng gồm ba vai trò trên ba
-runtime (Codex, Claude Code, oh-my-pi) và cách các vai trò phối hợp để hoàn
+Tài liệu này giải thích cách bộ setup tạo một phòng gồm ba vai trò trên bốn
+runtime (Codex, Claude Code, oh-my-pi, Pi từ pi.dev) và cách các vai trò phối hợp để hoàn
 thành một outcome kỹ thuật.
 
 ## Bức tranh tổng thể
@@ -13,13 +13,13 @@ Paseo provider codex-<role>
     -> ~/.codex-runtime/<role>/config.toml
     -> Codex với CODEX_HOME riêng
 
-Paseo provider claude-<role> | omp-<role>
-    -> ~/.local/bin/agent-room <claude|omp> <role>
-    -> claude / omp của operator (home và login gốc) + chỉ dẫn role
+Paseo provider claude-<role> | omp-<role> | pi-<role>
+    -> ~/.local/bin/agent-room <claude|omp|pi> <role>
+    -> runtime của operator (home và login gốc) + chỉ dẫn role
 ```
 
 Mỗi runtime có ba provider: `<runtime>-supervisor`, `<runtime>-lead`, và
-`<runtime>-peer` (runtime là `codex`, `claude`, hoặc `omp`). Supervisor và Lead
+`<runtime>-peer` (runtime là `codex`, `claude`, `omp`, hoặc `pi`). Supervisor và Lead
 nhận Paseo tools; Peer không nhận công cụ điều phối.
 
 ## Ranh giới trách nhiệm
@@ -94,7 +94,7 @@ vào `~/.codex`.
 Codex không còn là prerequisite bắt buộc của setup. Khi thiếu CLI Codex hoặc
 `~/.codex/{config.toml,auth.json,AGENTS.md,skills,plugins}`, installer bỏ qua
 generation/verification của runtime Codex, giữ nguyên runtime đang có và vẫn
-cài đủ provider/launcher cho Codex, Claude và omp. Không gỡ hay tự đăng nhập
+cài đủ provider/launcher cho Codex, Claude, omp và Pi. Không gỡ hay tự đăng nhập
 Codex. Muốn dùng Codex sau này, chuẩn bị đủ prerequisite rồi chạy lại
 `./install --apply`. Catalog qua `CODEX_ROOM_MODEL_CATALOG` có thể thay CLI
 trong bước generation offline, nhưng không thay executable khi chạy agent.
@@ -110,7 +110,7 @@ ghi đè notebook riêng, session, runtime directory, hoặc byte thuộc `~/.co
 của operator. Những file cũ còn tồn tại được giữ nguyên nhưng không phải là
 dependency của runtime mới.
 
-`agent-room` không sinh home riêng cho Claude Code hay omp: đổi
+`agent-room` không sinh home riêng cho Claude Code, omp hay Pi: đổi
 `CLAUDE_CONFIG_DIR` sẽ đổi khóa Keychain (mất login), còn đổi agent dir của omp
 sẽ chuyển cả database credential. Thay vào đó launcher đọc
 `developer_instructions` từ cùng overlay của role rồi áp dụng theo từng
@@ -122,10 +122,29 @@ process:
 - omp: nạp `~/.config/codex-room/omp-room.config.yml` bằng `--config`
   (`task.maxRecursionDepth: 0` gỡ tool `task`) và gộp chỉ dẫn role với
   `--append-system-prompt` mà Paseo truyền vào.
+- Pi (pi.dev, không phải omp): dùng `pi-supervisor`, `pi-lead`, `pi-peer`
+  qua adapter Pi/RPC của Paseo. Thêm role bằng một `--append-system-prompt`
+  riêng; Pi tự xử lý các append text/file còn lại. Giữ nguyên
+  `~/.pi/agent`/`PI_CODING_AGENT_DIR`.
+  Theo semantics native, append explicit bỏ discovery `APPEND_SYSTEM.md`;
+  muốn dùng file đó thì truyền thêm `--append-system-prompt /path/to/file`.
+  Extension Room `pi-mcp-adapter.mjs` nối config MCP theo session của Paseo
+  với MCP native Pi >=1.3.0; không sửa config hoặc credential của operator.
+  Có thể chọn binary bằng `PI_BIN`; không truyền YAML overlay hay `rpc-ui`
+  của omp. Pi không có subagent built-in; extension của operator vẫn được
+  giữ nguyên và không phải sandbox bảo mật.
 - Các lệnh probe như `--version` hoặc `auth status` chạy nguyên trạng.
 
-Model, thinking và permission mode của Claude/omp do Paseo agent chọn; các key
+Model/thinking của Claude/omp/Pi và permission mode được runtime hỗ trợ do Paseo agent chọn; các key
 chỉ dành cho Codex trong overlay (`model`, `sandbox_mode`, ...) không áp dụng.
+
+Pi là tùy chọn: thiếu Pi không chặn install/verify/doctor chung. Sau khi tự
+cài Pi chính thức và cấu hình authentication ngoài setup, chạy
+`agent-room pi lead` hoặc chọn provider `pi-lead` trong Paseo.
+Baseline hiện tại là Pi 1.3.0. Smoke prompt/RPC với npm 0.84.4 trước đây
+không chứng minh hỗ trợ MCP; bản đó không đáp ứng minimum của bridge.
+Nguồn chính thức và chi tiết adapter ở
+[`paseo/notes/pi-integration.md`](../paseo/notes/pi-integration.md).
 
 ## Luồng một candidate
 
@@ -168,11 +187,11 @@ MCP là bước vận hành của operator, không được suy ra chỉ từ te
 ## Sửa ở đâu?
 
 - Đổi model hoặc authority của role: sửa overlay tương ứng (authority áp dụng
-  cho cả ba runtime; model chỉ áp dụng cho Codex).
+  cho cả bốn runtime; model chỉ áp dụng cho Codex).
 - Đổi provider, command, hoặc MCP boundary: sửa
   `home/.paseo/config.json.template`.
 - Đổi cách ghép config Codex: sửa `home/.local/bin/codex-room-sync`; đổi cách
-  áp role cho Claude/omp: sửa `home/.local/bin/agent-room`. Cập nhật test
+  áp role cho Claude/omp/Pi: sửa `home/.local/bin/agent-room`. Cập nhật test
   boundary tương ứng.
 - Đổi nguyên tắc phối hợp chung: sửa
   `home/.config/codex-room/workflow/WORKSPACE_PROTOCOL.md`.

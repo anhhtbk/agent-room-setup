@@ -22,17 +22,18 @@ Claude Code and oh-my-pi roles use the same overlays through a second launcher:
 
 ```text
 ~/.paseo/config.json
-  claude-<role> / omp-<role> provider command
+  claude-<role> / omp-<role> / pi-<role> provider command
       |
       v
-~/.local/bin/agent-room <claude|omp> <role> <Paseo args...>
+~/.local/bin/agent-room <claude|omp|pi> <role> <Paseo args...>
       |
       +-- reads developer_instructions from overlays/<role>.config.toml
       +-- claude: merges a SessionStart hook into --settings,
       |           adds Agent,Workflow to --disallowedTools
       +-- omp:    --config ~/.config/codex-room/omp-room.config.yml,
       |           merges the role into --append-system-prompt
-      `-- exec claude|omp with the operator's own home (~/.claude, ~/.omp)
+      +-- pi:     adds an additive --append-system-prompt for the role
+      `-- exec claude|omp|pi with the operator's own home
 ```
 
 No per-role home is generated for these runtimes. Relocating
@@ -46,24 +47,39 @@ own login. Role policy is therefore per process:
   re-injects the role after resume, clear, and compaction. omp keeps only the
   last `--append-system-prompt`, so the launcher folds Paseo's value into one
   merged flag.
+  Pi appends are additive; the launcher adds its role flag before unchanged
+  host arguments, leaving Pi to parse text/files and message delimiters.
+  It does not pass omp's YAML overlay or relocate `PI_CODING_AGENT_DIR`.
+  Explicit append flags disable Pi's implicit `APPEND_SYSTEM.md` discovery;
+  operators can pass that file explicitly as another append.
+- **Pi MCP compatibility.** A room-managed `pi-mcp-adapter.mjs` implements
+  the pinned host's per-session `--mcp-config` protocol using Pi >=1.3.0's
+  native MCP API. It retains the builtin MCP extension and preserves
+  operator-owned configuration. This is separate from Paseo's prompt/history
+  extension, which does not deliver orchestration tools.
 - **Native subagents off.** Claude denies `Agent` and `Workflow`; omp sets
   `task.maxRecursionDepth: 0`, which removes its `task` tool. Delegation goes
   through Paseo roles, matching the Codex runtimes.
+  Pi has no built-in subagents. Custom Pi extensions remain operator-owned;
+  the role contract is not a sandbox for arbitrary extension code.
 - **Probes pass through.** `--version`, `--help`, and subcommands such as
   `auth status` run unchanged; any invocation starting with another flag, or
   with no arguments, is a role session.
+  Pi also treats positional messages as sessions; only its known maintenance
+  commands pass through. Literal arguments after `--` remain messages.
 
 Codex-only overlay keys (`model`, `sandbox_mode`, `approval_policy`, ...) do not
-apply to Claude/omp; model, thinking, and permission mode come from the Paseo
+apply to Claude/omp/Pi; model and thinking come from the Paseo
 agent settings.
+Pi does not expose an approval/sandbox mode equivalent to Codex.
 
 ## Ownership
 
 | Layer | Owner | Mutable state |
 | --- | --- | --- |
 | `~/.codex` | Operator/Codex | Auth, global config, skills, plugins, sessions |
-| `~/.config/codex-room` | This repository | Role overlays, omp overlay, and the workspace protocol reference |
-| `~/.claude`, `~/.omp` | Operator/Claude Code, omp | Auth, settings, skills, sessions (read by `agent-room` roles, never written by this repository) |
+| `~/.config/codex-room` | This repository | Role overlays, omp overlay, Pi MCP compatibility extension, and the workspace protocol reference |
+| `~/.claude`, `~/.omp`, `~/.pi` | Operator and their runtimes | Auth, settings, skills, sessions (never written by this repository's setup) |
 | `~/.codex-runtime` | `codex-room-sync` | Generated configs plus role-local sessions and databases |
 | `~/.paseo` | Paseo | Provider config, agents, projects, worktrees, logs and identity |
 | Paseo stable release checkout | Git | Source code for CLI, daemon and Desktop |

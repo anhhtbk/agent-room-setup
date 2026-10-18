@@ -1,6 +1,6 @@
 # All known providers need an explicit policy: upstream defaults to enabled.
 # Room roles exist for every runtime; only Supervisor and Lead get Paseo tools.
-["codex", "claude", "omp"] as $runtimes |
+["codex", "claude", "omp", "pi"] as $runtimes |
 .daemon.mcp.enabled == true and
 .daemon.mcp.injectIntoAgents == true and
 (.daemon.mcp | has("injectIntoProviders") | not) and

@@ -1,8 +1,8 @@
 # Codex Room Setup
 
 Reproducible configuration for a three-role room (Supervisor, Lead, Peer)
-running through an official Paseo stable release. Each role is offered on three
-runtimes: Codex, Claude Code, and oh-my-pi (omp).
+running through an official Paseo stable release. Each role is offered on four
+runtimes: Codex, Claude Code, oh-my-pi (omp), and [Pi (pi.dev)](https://pi.dev).
 
 ```text
 Paseo provider codex-<role>
@@ -11,12 +11,12 @@ Paseo provider codex-<role>
   -> isolated ~/.codex-runtime/<role>
   -> Codex app-server
 
-Paseo provider claude-<role> | omp-<role>
-  -> agent-room <claude|omp> <role>
-  -> operator's own claude / omp, plus role instructions and policy
+Paseo provider claude-<role> | omp-<role> | pi-<role>
+  -> agent-room <claude|omp|pi> <role>
+  -> operator's own runtime, plus role instructions and policy
 ```
 
-This repository deliberately does **not** own `~/.codex`, `~/.claude`, or `~/.omp`. Each operator installs and authenticates each runtime independently. The Codex sync reads the operator's existing `~/.codex/config.toml` as its base and shares their auth, skills, plugins, and global `AGENTS.md` by symlink. Hooks are shared only when `hooks.json` exists. Claude Code and omp run with the operator's own home and login; `agent-room` adds the role per process (see [Claude Code and omp roles](#claude-code-and-omp-roles)).
+This repository deliberately does **not** own `~/.codex`, `~/.claude`, `~/.omp`, or `~/.pi`. Each operator installs and authenticates each runtime independently. The Codex sync reads the operator's existing `~/.codex/config.toml` as its base and shares their auth, skills, plugins, and global `AGENTS.md` by symlink. Hooks are shared only when `hooks.json` exists. Claude Code, omp, and Pi keep the operator's home and login; `agent-room` adds the role per process (see [runtime roles](#claude-code-omp-and-pi-roles)).
 
 ## What gets installed
 
@@ -52,6 +52,11 @@ Prerequisites:
 - Optional: Claude Code (`claude`) and/or oh-my-pi (`omp`, 16.3.9 or newer)
   installed and logged in. Their `claude-*`/`omp-*` providers stay unavailable
   in Paseo until the runtime is on the daemon's PATH.
+- Optional: Pi from pi.dev (`pi` >=1.3.0; current smoke baseline 1.3.0).
+  The npm package is `@earendil-works/pi-coding-agent` and requires Node
+  >=22.19. Pi is distinct from omp. Use an existing installation or the
+  [official installation instructions](https://pi.dev).
+  Setup never installs/authenticates Pi or requires it to be present.
 
 ```bash
 git clone https://github.com/hoangnb24/codex-room-setup.git codex-room-setup
@@ -83,7 +88,7 @@ upgrade path: when Codex prerequisites are available it regenerates the three
 managed runtimes, preserves operator Codex files and existing runtime/session
 data, and retires only recognized, unchanged legacy artifacts.
 
-Codex is not required to install the room or use Claude/omp. All nine provider
+Codex is not required to install the room or use Claude/omp/Pi. All twelve role provider
 definitions and their launchers remain installed; a definition alone does not
 make its runtime usable. To enable Codex later, install/authenticate it, provide
 the shared resources above, and rerun `./install --apply`. An explicit
@@ -193,13 +198,13 @@ deletes the rebuildable `$RUN/cache`, refusing while a registered process
 still uses it (`make doctor` reports run directories under
 `~/.local/state/codex-room/runs` and `CODEX_ROOM_RUN_ROOTS`).
 
-## Claude Code and omp roles
+## Claude Code, omp, and Pi roles
 
-`claude-supervisor|lead|peer` and `omp-supervisor|lead|peer` extend Paseo's
-built-in Claude Code and omp adapters and launch
+`claude-supervisor|lead|peer`, `omp-supervisor|lead|peer`, and
+`pi-supervisor|lead|peer` extend Paseo's corresponding built-in adapters and launch
 `~/.local/bin/agent-room <runtime> <role>`. The launcher reads the same
 `developer_instructions` as the Codex role overlay, so role authority has one
-source, and then execs the operator's `claude` or `omp`:
+source, and then execs the operator's `claude`, `omp`, or `pi`:
 
 | | Claude Code | omp |
 | --- | --- | --- |
@@ -212,6 +217,47 @@ Models, thinking, and permission mode come from the Paseo agent settings; the
 Codex-only overlay keys do not apply. `agent-room claude lead` also works from a
 terminal for an interactive role session. See
 [docs/architecture.md](docs/architecture.md) for why no per-role home is created.
+
+### Pi (pi.dev)
+
+Pi uses its own adapter and `--mode rpc`, not omp's `rpc-ui` or YAML config.
+The launcher adds the role through a separate additive `--append-system-prompt`.
+Pi itself handles the host's text/file appends and `--` message boundaries;
+the launcher also applies the role to positional initial prompts.
+It leaves Pi's default `~/.pi/agent` and an operator-provided
+`PI_CODING_AGENT_DIR` unchanged. `PI_BIN` may select an absolute executable
+path; otherwise `pi` is resolved from PATH. Set that environment on the Paseo
+daemon as well when using a nonstandard binary.
+An explicit append follows native Pi semantics: implicit `APPEND_SYSTEM.md`
+discovery is skipped. Pass that file explicitly with another
+`--append-system-prompt /path/to/APPEND_SYSTEM.md` when needed.
+
+The managed `~/.config/codex-room/pi-mcp-adapter.mjs` bridges the pinned
+Paseo adapter's per-session MCP configuration to Pi's native MCP support.
+It does not install the third-party `pi-mcp-adapter` package or edit Pi's
+configuration. Select a Pi role in Paseo for automatic Supervisor/Lead
+orchestration tools; a standalone `agent-room pi lead` adds the role but
+does not manufacture a Paseo endpoint or credentials. Peer has no automatic
+Paseo tool injection. Builtin MCP must remain enabled and must not be replaced
+by an operator extension. Native configuration must not shadow the injected
+Paseo server. Native Pi may write its own runtime logs.
+
+```bash
+./install                         # Pi absent is informational, not an error
+./install --apply
+agent-room pi lead --version       # probe passes through
+agent-room pi lead                 # interactive role session
+agent-room pi peer "Inspect this project"
+# In Paseo, select pi-supervisor, pi-lead, or pi-peer.
+```
+
+Pi has no built-in subagents or approval sandbox. This launcher does not
+disable operator extensions or their custom tools; those remain trusted
+operator code, not a security boundary. Delegation follows the shared role
+contract. Model/thinking choices come from Pi/Paseo, not Codex's overlay
+model. Authentication remains a separate operator step.
+See [Pi integration research](paseo/notes/pi-integration.md) for pinned
+official sources and adapter details.
 
 ## Common operations
 

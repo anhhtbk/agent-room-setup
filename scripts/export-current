@@ -8,10 +8,11 @@ require_command python3
 require_command jq
 
 jq -e '
-  ([.agents.providers | keys[] | select(test("^(codex|claude|omp)-"))] | sort) ==
+  ([.agents.providers | keys[] | select(test("^(codex|claude|omp|pi)-"))] | sort) ==
     ["claude-lead", "claude-peer", "claude-supervisor",
      "codex-lead", "codex-peer", "codex-supervisor",
-     "omp-lead", "omp-peer", "omp-supervisor"] and
+     "omp-lead", "omp-peer", "omp-supervisor",
+     "pi-lead", "pi-peer", "pi-supervisor"] and
   .daemon.mcp.injectIntoAgents == true
 ' "$HOME/.paseo/config.json" >/dev/null ||
   die "installed Paseo config does not have the exact three-role contract per runtime"
@@ -42,6 +43,7 @@ for name in WORKSPACE_PROTOCOL.md IMPLEMENT_SPEC.md; do
   export_one "$HOME/.config/codex-room/workflow/$name" "$REPO_ROOT/home/.config/codex-room/workflow/$name"
 done
 export_one "$HOME/.config/codex-room/omp-room.config.yml" "$REPO_ROOT/home/.config/codex-room/omp-room.config.yml"
+export_one "$HOME/.config/codex-room/pi-mcp-adapter.mjs" "$REPO_ROOT/home/.config/codex-room/pi-mcp-adapter.mjs"
 for name in tree-audit.py worktree-guard.py run-procs.py room-gc.py; do
   export_one "$HOME/.config/codex-room/tools/$name" "$REPO_ROOT/home/.config/codex-room/tools/$name"
 done

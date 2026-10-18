@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""Launch Claude Code or oh-my-pi as a Codex Room role.
+"""Launch Claude Code, oh-my-pi, or Pi (pi.dev) as a Room role.
 
 Paseo starts a derived provider as ``agent-room <runtime> <role> <provider args...>``.
 The role contract is the ``developer_instructions`` block of the same overlay
 used by ``codex-room``, so every runtime reads one source of role authority.
 
-Unlike Codex, neither runtime gets a relocated home: relocating
-``CLAUDE_CONFIG_DIR`` or the omp agent directory would also relocate the
-operator's login. Role policy is applied per process instead:
+Unlike Codex, these runtimes keep the operator's home and login.
+Role policy is applied per process instead:
 
 * Claude Code: a ``SessionStart`` hook (merged into any host ``--settings``)
   injects the role on startup, resume, clear, and compaction. The Agent SDK
@@ -15,6 +14,10 @@ operator's login. Role policy is applied per process instead:
   replaces an argv ``--append-system-prompt``, so argv cannot carry the role.
 * omp: the role is merged into ``--append-system-prompt`` (last value wins, so
   the host's value is folded in rather than overridden).
+* Pi: a separate additive ``--append-system-prompt`` supplies the role while
+  Pi retains ownership of parsing host appends, files, and positional messages.
+  Pi has no built-in subagent tool. Operator extensions remain operator-owned.
+  A Room extension translates Paseo's session MCP config into native Pi MCP.
 * Native subagents are disabled (Claude ``Agent``/``Workflow`` tools; omp ``task``
   tool via a config overlay) so delegation goes through Paseo roles.
 
@@ -25,13 +28,15 @@ unchanged.
 import json
 import os
 import pathlib
+import re
 import shlex
 import shutil
+import subprocess
 import sys
 import tomllib
 
 
-RUNTIMES = ("claude", "omp")
+RUNTIMES = ("claude", "omp", "pi")
 ROLES = ("supervisor", "lead", "peer")
 SESSION_START_MODE = "--claude-session-start"
 APPEND_FLAG = "--append-system-prompt"
@@ -41,7 +46,21 @@ CLAUDE_DISALLOWED_FLAGS = ("--disallowedTools", "--disallowed-tools")
 CLAUDE_SUBAGENT_TOOLS = ("Agent", "Workflow")
 OMP_OVERLAY = "omp-room.config.yml"
 PROBE_ARGS = {"--version", "-v", "-V", "--help", "-h"}
+PI_SUBCOMMANDS = {"install", "remove", "uninstall", "update", "list", "config", "auth", "mcp"}
 USAGE = f"usage: agent-room <{'|'.join(RUNTIMES)}> <{'|'.join(ROLES)}> [runtime args...]"
+
+
+def require_pi_version(binary: str) -> None:
+    """Check before extension loading, which older Pi releases may not support."""
+    try:
+        result = subprocess.run(
+            [binary, "--version"], capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        raise SystemExit("cannot determine Pi version; Room sessions require Pi 1.3.0 or newer")
+    version = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:\+[^\s]+)?", result.stdout.strip())
+    if result.returncode or not version or tuple(map(int, version.groups())) < (1, 3, 0):
+        raise SystemExit("Room Pi sessions require stable Pi 1.3.0 or newer; update Pi or set PI_BIN")
 
 
 def room_config_home() -> pathlib.Path:
@@ -162,12 +181,23 @@ def main() -> None:
     if first not in RUNTIMES:
         raise SystemExit(f"unknown runtime: {first}\n{USAGE}")
 
-    env_name = "CLAUDE_BIN" if first == "claude" else "OMP_BIN"
+    env_name = {"claude": "CLAUDE_BIN", "omp": "OMP_BIN", "pi": "PI_BIN"}[first]
     binary = os.environ.get(env_name) or shutil.which(first)
     if not binary:
         raise SystemExit(f"{first} not found; install it or set {env_name}")
 
-    if is_session(args):
+    if first == "pi":
+        if not args or args[0] not in PROBE_ARGS | PI_SUBCOMMANDS:
+            role_text = role_instructions(role)
+            adapter = room_config_home() / "pi-mcp-adapter.mjs"
+            if not adapter.is_file():
+                raise SystemExit(f"Pi room MCP adapter is missing: {adapter}")
+            require_pi_version(binary)
+            args = [
+                APPEND_FLAG, role_text,
+                "--extension", str(adapter), *args,
+            ]
+    elif is_session(args):
         args = claude_args(args, role) if first == "claude" else omp_args(args, role)
     os.execv(binary, [binary, *args])
 

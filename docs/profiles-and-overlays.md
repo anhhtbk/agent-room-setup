@@ -2,11 +2,11 @@
 
 The word “profile” appears at three different levels:
 
-1. **Paseo custom provider:** `codex-<role>` extends the built-in Codex adapter; `claude-<role>` and `omp-<role>` extend the Claude Code and oh-my-pi adapters.
-2. **Codex Room overlay:** a focused TOML fragment. Codex merges it into a generated `CODEX_HOME`; `agent-room` reads only its `developer_instructions` for Claude/omp.
+1. **Paseo custom provider:** `codex-<role>` extends the built-in Codex adapter; `claude-<role>`, `omp-<role>`, and `pi-<role>` extend the Claude Code, oh-my-pi, and Pi adapters respectively.
+2. **Codex Room overlay:** a focused TOML fragment. Codex merges it into a generated `CODEX_HOME`; `agent-room` reads only its `developer_instructions` for Claude/omp/Pi.
 3. **Native Codex profile:** selected through `codex --profile`; this room does not use that mechanism.
 
-Changing a Paseo provider model affects the model picker and Paseo default. Changing an overlay affects the Codex process default after the next sync. Keep both aligned deliberately. Claude/omp role providers inherit their runtime's model catalog; an overlay's `developer_instructions` change reaches them on the next new session without a sync.
+Changing a Paseo provider model affects the model picker and Paseo default. Changing an overlay affects the Codex process default after the next sync. Keep both aligned deliberately. Claude/omp/Pi role providers inherit their runtime's model catalog; an overlay's `developer_instructions` change reaches them on the next new session without a sync.
 
 The selected defaults as of 2026-10-01 are Lead `gpt-6-astra` / `medium`,
 Supervisor and Peer `gpt-6.1-sol` / `medium`. This is an explicit operator

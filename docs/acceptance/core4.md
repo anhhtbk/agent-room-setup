@@ -23,11 +23,12 @@ inventory, so it requires a reachable Paseo daemon. `scripts/verify` and the
 other lower-level scripts are maintenance interfaces for an already installed
 room.
 
-The room owns three derived providers per runtime (`codex-*`, `claude-*`,
-`omp-*`). Paseo MCP is injected into Supervisor and Lead;
-Peer has no orchestration tools. Human retains product, cost, external-effect,
-and irreversible-risk decisions. Supervisor routes intent, Lead owns technical
-acceptance, and Peer owns one bounded outcome at a time.
+The room defines three derived providers per runtime (`codex-*`, `claude-*`,
+`omp-*`, `pi-*`). The policy enables Paseo tools for Supervisor and Lead and
+disables automatic injection for Peer. Pi delivery is accepted within the
+verification boundaries below. Human retains product, cost, external-effect, and irreversible-risk
+decisions. Supervisor routes intent, Lead owns technical acceptance, and Peer
+owns one bounded outcome at a time.
 
 Repeated apply regenerates managed outputs while preserving operator
 `~/.codex` bytes, existing role sessions and databases, and private legacy
@@ -35,6 +36,150 @@ runtime directories. Only recognized, unchanged obsolete artifacts are retired;
 customized or redirecting artifacts are preserved with a warning. Transaction
 backups are owner-only. The installer does not authenticate Codex, start the
 daemon, manage operator credentials, or install Desktop GUI state.
+
+## Pi integration — technical ACCEPT (2026-10-18)
+
+Base: `d097d75516993b9ae5d56e859c95c461b2850153`. Lead owns implementation.
+Research Peer owned only `paseo/notes/pi-integration.md`; Lead **ACCEPTS** its
+research snapshot `8b9e31009d723ebb80110e3ffe9d730b66f06abc41373ef9ca16d738e5393366`
+and **ACCEPTED the REOPEN_REQUEST** on MCP delivery. That dependency is now
+resolved by the room-owned adapter and the execution/resume evidence below.
+Lead **ACCEPTS the Pi working-tree candidate** on this base; no commit or push.
+All Peer briefs are closed and repository ownership is back with Lead.
+
+Pi 1.3.0 role/host prompt and RPC `get_state` smoke passed for all three roles
+in temporary HOME. That does not prove orchestration tools are delivered.
+Pinned Paseo rejects Pi's builtin MCP discovery signature and expects the old
+`--mcp-config` interface. Its prompt/history extension does not register tools.
+Setting `paseoTools.enabled` is policy, not delivery evidence.
+
+Decision: Lead selects a room-owned compatibility extension using Pi 1.3.0's
+native MCP registration API to implement the pinned Paseo `--mcp-config`
+interface. No Paseo pin upgrade, upstream patch, or replacement of operator
+MCP configuration is selected. The independent architecture brief is closed;
+its accepted route and constraints are implemented in the accepted candidate.
+
+Lead **ACCEPTS the bounded implementation for integration** after inspecting
+both files and the writer's actual Pi 1.3.0 discovery/failure evidence:
+
+- `home/.local/bin/agent-room`:
+  `716adc239ac8d9128af7d11141939fdad4ce280d32bd6c8437d348b7893248ed`
+- `home/.config/codex-room/pi-mcp-adapter.mjs`:
+  `9d39bfb276ca453bbfa2c0b480d0bb27aec812ac8d14192054b36d7d92e8617b`
+
+The writer brief is closed and both files are now Lead-owned. The implementation
+uses actual native registration and exits 1 on startup delivery/configuration
+failures rather than throwing an error Pi can swallow. Bounded implementation
+acceptance was followed by the separate tool-execution/resume proof below;
+registration and discovery alone were not treated as sufficient. Lead now owns
+all repository changes and the handed-off temporary proof artifacts. No assignment
+authorized authentication, external model calls or live daemon changes.
+Lead also **ACCEPTS the fresh read-only candidate review** of these exact hashes:
+no evidence-backed blocker was found in the launcher/bridge or lifecycle callers.
+This is source/checksum evidence only; that Peer did not repeat runtime smoke.
+Its brief is closed, with no write ownership or outstanding action.
+
+- Register diagnostic command `mcp:1`, not `mcp`: Pi replaces its builtin when
+  an extension registers the exact `mcp` command. The Peer withdrew its initial
+  recommendation after checking the builtin exclusion logic. A real Pi 1.3.0
+  prototype returned both adapter `mcp:1` and `builtin:mcp` through RPC.
+  This proves discovery compatibility only, not tool delivery.
+- Register the CLI flag at extension load; consume its value at session start.
+- Remove only the legacy `auth:false` and `oauth:false` sentinels; preserve
+  valid auth configuration and the per-session URL, caller identity and headers.
+  Removing `oauth:false` alone does not disable native OAuth.
+- Use direct exposure for the injected Paseo server, not all operator servers.
+- Disabled/replaced builtin MCP or a native configuration shadowing the injected
+  Paseo server must fail visibly, not masquerade as successful delivery.
+  Preserve operator files; account for native namespace normalization.
+- Keep exact-provider policy enabled for Supervisor/Lead and disabled for Peer.
+  This prevents automatic injection; it is not a security sandbox.
+
+The delivery dependency is closed: exact pinned-Paseo discovery and generated
+per-session configuration reach Pi native MCP; real tool calls and resumed
+caller/token identity were exercised. Peer policy prevents automatic injection.
+Disabled builtin, native collision and malformed-config cases exit 1. The
+installed launcher and apply/reapply/verify/doctor work without Pi or Codex in
+PATH; actually launching a missing runtime fails with an actionable diagnostic.
+No product-scope reduction or deferred implementation is used for acceptance.
+
+Completed Lead integration checks:
+
+- `python3 -m unittest discover -s tests`: **135 tests passed** (163.580s),
+  including unsupported-Pi session rejection and Pi private-state preservation.
+- `./scripts/verify --source`: `VERIFY_OK`; shell syntax, Python compilation
+  and `node --check` on the managed adapter passed.
+- Disposable copy with local Git/npm build fixtures and PATH containing
+  neither Pi nor Codex: `./install`, `./install --apply` twice,
+  `scripts/verify`, `scripts/doctor` all exited 0. No `.pi`, `.codex` or
+  `.codex-runtime` was created by setup. Twelve role definitions installed;
+  Pi policies were Supervisor/Lead true, Peer false.
+- Installed launcher with actual Pi 1.3.0: all three roles returned successful
+  RPC `get_state`, zero messages, correct role plus host append and unchanged
+  custom agent-dir/settings. No model was invoked.
+- `scripts/export-current --apply` and `scripts/uninstall --apply` on the
+  disposable copy exited 0; export retained the adapter bytes, uninstall
+  removed the managed adapter and preserved a private Pi state marker.
+- Doctor returned 0 with warnings for unsupported Pi 0.84.4 and a failing
+  optional version probe. Neither becomes a common setup prerequisite.
+
+Lead smoke logs are under temporary root `room-pi-final-414b6wwd`:
+`final-setup-{0..4}.log`, `role-{supervisor,lead,peer}.{json,log}`,
+`doctor-*.log`, `export.log`, `uninstall.log` and `pinned-real-handler.log`.
+
+Lead **ACCEPTS the bounded protocol proof** at
+`/tmp/pi-mcp-proof.HbNG2i/run-cXKvTM/evidence.json` for the hashes above:
+the exact pinned `PiRpcAgentClient`/`PiCliRuntime` generated session config,
+the production launcher and Pi 1.3.0 CLI discovered native tools, and Pi's
+native SDK executed `tools/call` against a loopback counter fixture.
+Supervisor changed its counter 0→3 and Lead 0→5 with the expected caller and
+bearer header. Peer exact-ID policy produced one launch, no config flag and no
+fixture requests. That initial snapshot did not prove resume because an empty
+session had not persisted. It is superseded for resume by the final proof below,
+not retroactively counted as a resume pass.
+
+Final proof disposition: **ACCEPT**.
+
+- Peer evidence `run-ZD5qYW/evidence.json` under
+  `/tmp/pi-mcp-proof.HbNG2i/` proves fresh config/caller/token and native
+  discovery after actual pinned `resumeSession`, four SDK tool calls, and Peer
+  opt-out. A user entry was seeded through `SessionManager` storage API to
+  create a persisted session without a model call.
+- Peer evidence `real-server-mo550F/evidence.json` exercises the actual pinned
+  `createAgentMcpServer → createPaseoToolCatalog → list_agents` handler.
+- Lead inspected the harness and source build entries, then independently ran
+  `/opt/homebrew/bin/node /tmp/pi-mcp-proof.HbNG2i/proof-real-server.mjs`:
+  **exit 0**, four real handler calls. Evidence:
+  `/private/tmp/pi-mcp-proof.HbNG2i/real-server-ywknrk/evidence.json`.
+  Both Supervisor and Lead returned only workspace A's visible record before
+  resume and only workspace B's record with the new caller/token after resume;
+  archived and other-workspace records were filtered out.
+
+Evidence boundaries: CLI performs real probe/config/discovery; tool execution
+uses Pi 1.3.0 native SDK tools directly, not model selection. The MCP server and
+handler are pinned source, but manager/storage/provider data are isolated RAM
+fixtures and HTTP auth middleware is loopback harness code. No live daemon,
+real authentication, paid model turn or full model-driven delegation was tested.
+These are unexercised deployment/runtime boundaries, not missing bridge code.
+An early direct smoke of the historical npm 0.84.4 bundle failed on missing
+`jiti` before extension loading. The final launcher rejects that unsupported
+version at its version gate; this is not claimed as repairing the old bundle.
+
+Isolation audit caveat: the proof Peer's initial dependency download installed
+under `/tmp` but did not override npm HOME/cache. Zero writes to the real npm
+cache cannot be certified for that download. Do not erase this uncertainty or
+modify the global cache to conceal it. All Pi runtime runs used temporary
+HOME/agentDir and scrubbed environments; Lead's independent run also supplied
+a temporary npm cache. No global runtime installation or authentication was
+performed.
+
+Usable downstream: apply the repository through the normal installer, supply
+an operator-installed/authenticated Pi >=1.3.0, and select `pi-supervisor`,
+`pi-lead` or `pi-peer` in Paseo. Supervisor/Lead receive the native MCP catalog;
+Peer does not receive automatic Paseo injection. Standalone `agent-room pi lead`
+adds the role but does not manufacture a Paseo endpoint or credentials.
+The four-runtime outcome remains unchanged. Technical acceptance does not
+authorize commits, pushes, deployment or installing into the operator's HOME.
 
 ## Optional Codex setup acceptance — 2026-10-15
 

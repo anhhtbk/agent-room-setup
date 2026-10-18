@@ -5,6 +5,7 @@
 ```text
 ~/.config/codex-room/model-instructions.md
 ~/.config/codex-room/omp-room.config.yml
+~/.config/codex-room/pi-mcp-adapter.mjs
 ~/.config/codex-room/overlays/*.config.toml
 ~/.config/codex-room/tools/{tree-audit,worktree-guard,run-procs}.py
 ~/.config/codex-room/workflow/IMPLEMENT_SPEC.md
@@ -38,6 +39,7 @@ Never edit generated `config.toml` as the durable source. Change the base Codex 
 Never commit:
 
 - `~/.codex/auth.json` or other Codex auth stores.
+- Pi's `~/.pi/agent/auth.json`, settings, and sessions (or a custom `PI_CODING_AGENT_DIR`).
 - Paseo daemon keypairs, push tokens, IDs, agent state, worktrees, uploads, logs or PID files.
 - Runtime sessions, logs, memories, queues or SQLite databases.
 - Backup directories.

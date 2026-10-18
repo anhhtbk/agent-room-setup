@@ -89,10 +89,13 @@ printf '%s\n' "$role_home" >>"${CODEX_LAUNCH_LOG:?CODEX_LAUNCH_LOG is required}"
 EOF
 chmod 0755 "$fake_bin/codex"
 
-for runtime in claude omp; do
+for runtime in claude omp pi; do
   cat >"$fake_bin/$runtime" <<'EOF'
 #!/usr/bin/env python3
 import json, os, sys
+if os.path.basename(sys.argv[0]) == "pi" and sys.argv[1:] == ["--version"]:
+    print("1.3.0")
+    sys.exit(0)
 with open(os.environ["AGENT_LAUNCH_LOG"], "a") as log:
     log.write(json.dumps(sys.argv) + "\n")
 EOF
@@ -110,7 +113,7 @@ cat >"$fake_bin/paseo-live" <<'EOF'
 #!/bin/sh
 set -eu
 if [ "${1:-}" = provider ] && [ "${2:-}" = ls ]; then
-  printf '%s\n' '[{"provider":"claude-lead"},{"provider":"claude-peer"},{"provider":"claude-supervisor"},{"provider":"codex-lead"},{"provider":"codex-peer"},{"provider":"codex-supervisor"},{"provider":"omp-lead"},{"provider":"omp-peer"},{"provider":"omp-supervisor"}]'
+  printf '%s\n' '[{"provider":"claude-lead"},{"provider":"claude-peer"},{"provider":"claude-supervisor"},{"provider":"codex-lead"},{"provider":"codex-peer"},{"provider":"codex-supervisor"},{"provider":"omp-lead"},{"provider":"omp-peer"},{"provider":"omp-supervisor"},{"provider":"pi-lead"},{"provider":"pi-peer"},{"provider":"pi-supervisor"}]'
   exit 0
 fi
 exit 1
@@ -221,10 +224,10 @@ for role in supervisor lead peer; do
 done
 
 paseo_config="$fake_home/.paseo/config.json"
-provider_inventory=$(jq -c '[.agents.providers | keys[] | select(test("^(codex|claude|omp)-"))] | sort' "$paseo_config")
+provider_inventory=$(jq -c '[.agents.providers | keys[] | select(test("^(codex|claude|omp|pi)-"))] | sort' "$paseo_config")
 mcp_inventory=$(jq -c '[.agents.providers | to_entries[] | select(.value.paseoTools.enabled == true) | .key] | sort' "$paseo_config")
-[[ "$provider_inventory" == '["claude-lead","claude-peer","claude-supervisor","codex-lead","codex-peer","codex-supervisor","omp-lead","omp-peer","omp-supervisor"]' ]] || fail "unexpected room provider inventory: $provider_inventory"
-[[ "$mcp_inventory" == '["claude-lead","claude-supervisor","codex-lead","codex-supervisor","omp-lead","omp-supervisor"]' ]] || fail "unexpected MCP recipients: $mcp_inventory"
+[[ "$provider_inventory" == '["claude-lead","claude-peer","claude-supervisor","codex-lead","codex-peer","codex-supervisor","omp-lead","omp-peer","omp-supervisor","pi-lead","pi-peer","pi-supervisor"]' ]] || fail "unexpected room provider inventory: $provider_inventory"
+[[ "$mcp_inventory" == '["claude-lead","claude-supervisor","codex-lead","codex-supervisor","omp-lead","omp-supervisor","pi-lead","pi-supervisor"]' ]] || fail "unexpected MCP recipients: $mcp_inventory"
 
 PASEO_COMMAND="$fake_bin/paseo-live" "$source_root/install" --verify
 printf 'PUBLIC_VERIFY_FIXTURE_OK live_inventory_is_fake\n'
@@ -251,6 +254,8 @@ expected_launched_homes=(
   || fail "installed agent-room failed for Claude Lead"
 "$fake_home/.local/bin/agent-room" omp peer --mode rpc-ui --append-system-prompt host-prompt \
   || fail "installed agent-room failed for omp Peer"
+"$fake_home/.local/bin/agent-room" pi supervisor --mode rpc --append-system-prompt host-prompt \
+  || fail "installed agent-room failed for Pi Supervisor"
 rejects "$fake_home/.local/bin/agent-room" claude review
 python3 - "$AGENT_LAUNCH_LOG" "$fake_home" <<'PY' || fail "agent-room did not apply the installed role policy"
 import json, shlex, subprocess, sys
@@ -258,7 +263,7 @@ from pathlib import Path
 
 launches = [json.loads(line) for line in Path(sys.argv[1]).read_text().splitlines()]
 home = Path(sys.argv[2])
-claude, omp = launches
+claude, omp, pi = launches
 settings = json.loads(claude[claude.index("--settings") + 1])
 assert settings["cleanupPeriodDays"] == 30, settings
 hook = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
@@ -269,6 +274,9 @@ assert omp[omp.index("--config") + 1] == str(home / ".config/codex-room/omp-room
 prompt = omp[omp.index("--append-system-prompt") + 1]
 assert prompt.startswith("Room role: Peer.") and prompt.endswith("\n\nhost-prompt"), prompt
 assert omp.count("--append-system-prompt") == 1, omp
+prompts = [pi[index + 1] for index, arg in enumerate(pi) if arg == "--append-system-prompt"]
+assert prompts[0].startswith("Room role: Supervisor.") and prompts[1] == "host-prompt", prompts
+assert "--config" not in pi, pi
 PY
 
 expected_paseo_commit=$(awk -F'"' '/^verified_commit = / {print $2; exit}' "$source_root/paseo/source.toml")

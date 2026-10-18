@@ -51,6 +51,7 @@ if [[ "$mode" == source ]]; then
   launcher_path="$REPO_ROOT/home/.local/bin/codex-room"
   agent_launcher_path="$REPO_ROOT/home/.local/bin/agent-room"
   omp_overlay_path="$REPO_ROOT/home/.config/codex-room/omp-room.config.yml"
+  pi_adapter_path="$REPO_ROOT/home/.config/codex-room/pi-mcp-adapter.mjs"
   tools_root="$REPO_ROOT/home/.config/codex-room/tools"
   spec_orchestration="$REPO_ROOT/home/.config/codex-room/skills/spec-orchestration"
   obsolete_paths=(
@@ -69,6 +70,7 @@ else
   launcher_path="$HOME/.local/bin/codex-room"
   agent_launcher_path="$HOME/.local/bin/agent-room"
   omp_overlay_path="$HOME/.config/codex-room/omp-room.config.yml"
+  pi_adapter_path="$HOME/.config/codex-room/pi-mcp-adapter.mjs"
   tools_root="$HOME/.config/codex-room/tools"
   spec_orchestration="$HOME/.config/codex-room/skills/spec-orchestration"
   obsolete_paths=(
@@ -89,7 +91,7 @@ check "Paseo config exists" test -f "$config_template"
 check "Paseo config is valid JSON" jq -e . "$config_template"
 check "room sync exists" test -f "$sync_path"
 check "room launcher is executable" test -x "$launcher_path"
-check "Claude/omp room launcher is executable" test -x "$agent_launcher_path"
+check "Claude/omp/Pi room launcher is executable" test -x "$agent_launcher_path"
 check "omp room overlay exists" test -f "$omp_overlay_path"
 check "omp room overlay removes native subagents" grep -Eq '^[[:space:]]+maxRecursionDepth: 0$' "$omp_overlay_path"
 check "workspace protocol exists" test -f "$workflow_root/WORKSPACE_PROTOCOL.md"
@@ -232,10 +234,11 @@ rejects_legacy_role() {
 }
 check "launcher rejects Review role" rejects_legacy_role review
 check "launcher rejects Harness role" rejects_legacy_role harness
-for runtime in claude omp; do
+for runtime in claude omp pi; do
   check "$runtime launcher rejects Review role" bash -c '! "$1" "$2" review >/dev/null 2>&1' bash "$agent_launcher_path" "$runtime"
 done
-check "Claude/omp launcher rejects unknown runtime" bash -c '! "$1" codex lead >/dev/null 2>&1' bash "$agent_launcher_path"
+check "agent-room launcher rejects unknown runtime" bash -c '! "$1" codex lead >/dev/null 2>&1' bash "$agent_launcher_path"
+check "Pi MCP adapter syntax" node --check "$pi_adapter_path"
 check "launcher has one public role route" bash -c '! grep -Fq -- "--resolve-evidence-home" "$1"' bash "$launcher_path"
 
 check "Human authority is explicit" grep -Fq "Human owns product goals" "$workflow_root/WORKSPACE_PROTOCOL.md"
@@ -273,10 +276,10 @@ room_provider_launches_role() {
       .extends == $runtime and .command == [$launcher, $runtime, $role]] | all
   ' "$config_template"
 }
-for runtime in codex claude omp; do
+for runtime in codex claude omp pi; do
   check "exactly three derived $runtime providers" room_providers_are_exact "$runtime"
 done
-for runtime in claude omp; do
+for runtime in claude omp pi; do
   check "$runtime providers launch agent-room roles" room_provider_launches_role "$runtime"
 done
 check "exact Paseo tool boundary" jq -e -f "$REPO_ROOT/scripts/lib/paseo-tools.jq" "$config_template"
@@ -389,10 +392,11 @@ if [[ "$live" == true ]]; then
   inventory_file=$(mktemp "${TMPDIR:-/tmp}/codex-room-provider-check.XXXXXX")
   if "$paseo_command" provider ls --host 127.0.0.1:6767 --json >"$inventory_file" 2>/dev/null; then
     check "exact live room provider inventory" jq -e '
-      [.[].provider | select(test("^(codex|claude|omp)-"))] | sort ==
+      [.[].provider | select(test("^(codex|claude|omp|pi)-"))] | sort ==
       ["claude-lead", "claude-peer", "claude-supervisor",
        "codex-lead", "codex-peer", "codex-supervisor",
-       "omp-lead", "omp-peer", "omp-supervisor"]
+       "omp-lead", "omp-peer", "omp-supervisor",
+       "pi-lead", "pi-peer", "pi-supervisor"]
     ' "$inventory_file"
   else
     log "FAIL  live Paseo provider inventory is unreachable"

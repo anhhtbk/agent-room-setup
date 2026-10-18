@@ -125,6 +125,7 @@ MANAGED_FILES = (
     (".config/codex-room/overlays/peer.config.toml", ".config/codex-room/overlays/peer.config.toml", 0o600),
     (".config/codex-room/workflow/WORKSPACE_PROTOCOL.md", ".config/codex-room/workflow/WORKSPACE_PROTOCOL.md", 0o644),
     (".config/codex-room/omp-room.config.yml", ".config/codex-room/omp-room.config.yml", 0o644),
+    (".config/codex-room/pi-mcp-adapter.mjs", ".config/codex-room/pi-mcp-adapter.mjs", 0o644),
     (".config/codex-room/workflow/IMPLEMENT_SPEC.md", ".config/codex-room/workflow/IMPLEMENT_SPEC.md", 0o644),
     (".config/codex-room/tools/tree-audit.py", ".config/codex-room/tools/tree-audit.py", 0o755),
     (".config/codex-room/tools/worktree-guard.py", ".config/codex-room/tools/worktree-guard.py", 0o755),
@@ -1127,7 +1128,7 @@ def print_plan(home: Path) -> int:
     codex_enabled = codex_available(home)
     if codex_enabled:
         out("GENERATE  supervisor, lead, peer into existing CODEX runtime root")
-    for runtime, variable in (("claude", "CLAUDE_BIN"), ("omp", "OMP_BIN")):
+    for runtime, variable in (("claude", "CLAUDE_BIN"), ("omp", "OMP_BIN"), ("pi", "PI_BIN")):
         found = command_path(os.environ.get(variable, runtime))
         state = "found" if found else f"missing; {runtime}-* providers stay unavailable"
         out(f"OPTIONAL  {runtime} runtime for agent-room roles: {state}")

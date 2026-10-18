@@ -303,6 +303,45 @@
           "enabled": false
         }
       },
+      "pi-supervisor": {
+        "extends": "pi",
+        "label": "Pi Supervisor",
+        "description": "Portfolio governance seat on Pi (pi.dev) with the Room role contract",
+        "command": [
+          "@@HOME@@/.local/bin/agent-room",
+          "pi",
+          "supervisor"
+        ],
+        "paseoTools": {
+          "enabled": true
+        }
+      },
+      "pi-lead": {
+        "extends": "pi",
+        "label": "Pi Lead",
+        "description": "Project technical authority on Pi (pi.dev) with the Room role contract",
+        "command": [
+          "@@HOME@@/.local/bin/agent-room",
+          "pi",
+          "lead"
+        ],
+        "paseoTools": {
+          "enabled": true
+        }
+      },
+      "pi-peer": {
+        "extends": "pi",
+        "label": "Pi Peer",
+        "description": "Bounded engineering seat on Pi (pi.dev) without Paseo orchestration tools",
+        "command": [
+          "@@HOME@@/.local/bin/agent-room",
+          "pi",
+          "peer"
+        ],
+        "paseoTools": {
+          "enabled": false
+        }
+      },
       "claude": {
         "paseoTools": {
           "enabled": false

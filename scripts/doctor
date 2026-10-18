@@ -50,10 +50,25 @@ for resource in config.toml auth.json AGENTS.md skills plugins; do
   fi
 done
 
-# Claude Code and omp are optional: their Room providers stay unavailable until installed.
-for command_name in claude omp; do
-  if command -v "$command_name" >/dev/null 2>&1; then
-    log "OK    $(printf '%-12s' "$command_name") $("$command_name" --version 2>/dev/null | head -n 1)"
+# Agent runtimes are optional: their Room providers stay unavailable until installed.
+for runtime_spec in claude:CLAUDE_BIN omp:OMP_BIN pi:PI_BIN; do
+  IFS=: read -r command_name variable <<<"$runtime_spec"
+  binary="${!variable:-$command_name}"
+  if command -v "$binary" >/dev/null 2>&1; then
+    version=$("$binary" --version 2>/dev/null) || version=""
+    version=${version%%$'\n'*}
+    if [[ -z "$version" ]]; then
+      log "WARN  $(printf '%-12s' "$command_name") unable to read runtime version"
+      warnings=$((warnings + 1))
+    elif [[ "$command_name" == pi ]] && ! {
+      [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(\+[^[:space:]]+)?$ ]] &&
+        (( BASH_REMATCH[1] > 1 || (BASH_REMATCH[1] == 1 && BASH_REMATCH[2] >= 3) ))
+    }; then
+      log "WARN  Pi runtime   Room MCP requires Pi >=1.3.0; found ${version:-unknown}; setup remains available"
+      warnings=$((warnings + 1))
+    else
+      log "OK    $(printf '%-12s' "$command_name") ${version:-unknown}"
+    fi
   else
     log "WARN  $(printf '%-12s' "$command_name") missing; $command_name-* Room providers stay unavailable"
     warnings=$((warnings + 1))

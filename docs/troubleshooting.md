@@ -16,22 +16,34 @@ The operator's `~/.codex` is incomplete for this setup. Check the exact missing 
 ## Paseo does not show custom providers
 
 1. Validate `~/.paseo/config.json` with `jq`.
-2. Confirm Codex role commands point to `~/.local/bin/codex-room` and Claude/omp
+2. Confirm Codex role commands point to `~/.local/bin/codex-room` and Claude/omp/Pi
    role commands point to `~/.local/bin/agent-room`.
 3. Confirm `~/.local/bin` is on the daemon's PATH.
 4. Restart Paseo when no agent is running.
 5. Run `./install --verify`.
 
-## A `claude-*` or `omp-*` role is unavailable or ignores its role
+## A `claude-*`, `omp-*`, or `pi-*` role is unavailable or ignores its role
 
-1. Run `paseo provider diagnostic claude-lead` (or `omp-lead`): Paseo probes
+1. Run `paseo provider diagnostic claude-lead` (or `omp-lead`/`pi-lead`): Paseo probes
    `agent-room <runtime> <role> --version`, so the runtime must be on the
-   daemon's PATH or set through `CLAUDE_BIN`/`OMP_BIN`.
+   daemon's PATH or set through `CLAUDE_BIN`/`OMP_BIN`/`PI_BIN`.
 2. `agent-room` fails before exec when the role overlay has no
-   `developer_instructions` or `omp-room.config.yml` is missing.
+   `developer_instructions` or the omp-specific `omp-room.config.yml` is missing.
 3. Claude receives the role from a `SessionStart` hook; setting
    `disableAllHooks` in operator Claude settings removes it.
 4. Role changes apply to new sessions only.
+5. Pi is pi.dev, not omp: check `agent-room pi lead --version`. Pi roles use
+   `--mode rpc`; do not add omp's `--config` or `rpc-ui` flags. Pi custom
+   extensions can rewrite prompts/tools; inspect those separately when
+   debugging role behavior. Setup does not alter `~/.pi/agent` or credentials.
+6. Pi orchestration requires >=1.3.0 and the managed
+   `~/.config/codex-room/pi-mcp-adapter.mjs`. Do not disable/replace builtin
+   MCP. A native `mcp.json` entry shadowing the injected Paseo server must
+   be resolved by the operator; setup will not overwrite it.
+7. An interactive `agent-room pi lead` alone has no Paseo endpoint/token.
+   Use `pi-lead` or `pi-supervisor` through Paseo for automatic orchestration
+   delivery. Provider policy or `get_state` success alone does not prove tools
+   arrived.
 
 ## Daemon PID and listener disagree
 

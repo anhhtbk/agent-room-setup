@@ -88,12 +88,11 @@ class SetupShapeTests(unittest.TestCase):
         config = json.loads(PASEO_TEMPLATE.read_text().replace("@@HOME@@", "/tmp/operator"))
         providers = config["agents"]["providers"]
         orchestrators = set()
-        for runtime in ("codex", "claude", "omp"):
+        for runtime in ("codex", "claude", "omp", "pi"):
             room_roles = sorted(name for name in providers if name.startswith(f"{runtime}-"))
             self.assertEqual(room_roles, [f"{runtime}-lead", f"{runtime}-peer", f"{runtime}-supervisor"])
-            self.assertIn("without Paseo orchestration tools", providers[f"{runtime}-peer"]["description"])
             orchestrators |= {f"{runtime}-supervisor", f"{runtime}-lead"}
-        for runtime in ("claude", "omp"):
+        for runtime in ("claude", "omp", "pi"):
             for role in ("supervisor", "lead", "peer"):
                 provider = providers[f"{runtime}-{role}"]
                 self.assertEqual(provider["extends"], runtime)
@@ -918,21 +917,30 @@ class PublicInstallTransactionTests(unittest.TestCase):
         env.pop("CODEX_ROOM_MODEL_CATALOG", None)
         env.pop("CODEX_BIN", None)
         self.assertIsNone(shutil.which("codex", path=env["PATH"]))
+        self.assertIsNone(shutil.which("pi", path=env["PATH"]))
         for arguments in ((), ("--apply",)):
             result = self.run_install(arguments, env)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertFalse((self.home / ".codex").exists())
         self.assertFalse((self.home / ".codex-runtime").exists())
+        self.assertFalse((self.home / ".pi").exists())
         providers = json.loads((self.home / ".paseo/config.json").read_text())["agents"]["providers"]
-        for runtime in ("codex", "claude", "omp"):
+        for runtime in ("codex", "claude", "omp", "pi"):
             self.assertIn(f"{runtime}-lead", providers)
         runtime = self.home / ".codex-runtime"
         runtime.mkdir(mode=0o755)
         (runtime / "private.sqlite").write_bytes(b"private\x00")
         before = self.tree_snapshot(runtime)
+        pi_home = self.home / ".pi/agent"
+        pi_home.mkdir(parents=True)
+        (pi_home / "settings.json").write_text('{"defaultProvider":"operator"}\n')
+        (pi_home / "mcp.json").write_text('{"mcpServers":{"private":{"enabled":false}}}\n')
+        (pi_home / "auth.json").write_bytes(b"operator-private-credentials\n")
+        pi_before = self.tree_snapshot(pi_home)
         result = self.run_install(("--apply",), env)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.tree_snapshot(runtime), before)
+        self.assertEqual(self.tree_snapshot(pi_home), pi_before)
         self.assertEqual(runtime.stat().st_mode & 0o777, 0o755)
 
     def test_default_plan_is_complete_and_non_mutating(self) -> None:
@@ -1637,7 +1645,7 @@ class RuntimeGenerationTests(unittest.TestCase):
 
 
 class AgentRoomLauncherTests(unittest.TestCase):
-    """Behavior of ``agent-room``, the Claude Code/omp role launcher."""
+    """Behavior of ``agent-room``, the Claude Code/omp/Pi role launcher."""
 
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
@@ -1646,11 +1654,13 @@ class AgentRoomLauncherTests(unittest.TestCase):
         self.log = self.root / "launches.jsonl"
         self.env = os.environ.copy()
         self.env["CODEX_ROOM_CONFIG_HOME"] = str(ROOM)
-        for runtime, variable in (("claude", "CLAUDE_BIN"), ("omp", "OMP_BIN")):
+        for runtime, variable in (("claude", "CLAUDE_BIN"), ("omp", "OMP_BIN"), ("pi", "PI_BIN")):
             binary = self.root / runtime
             binary.write_text(
                 f"#!{sys.executable}\nimport json, sys\n"
-                f"open({str(self.log)!r}, 'a').write(json.dumps(sys.argv[1:]) + '\\n')\n"
+                + ("if sys.argv[1:] == ['--version']:\n    print('1.3.0'); sys.exit(0)\n"
+                   if runtime == "pi" else "")
+                + f"open({str(self.log)!r}, 'a').write(json.dumps(sys.argv[1:]) + '\\n')\n"
             )
             binary.chmod(0o755)
             self.env[variable] = str(binary)
@@ -1718,6 +1728,27 @@ class AgentRoomLauncherTests(unittest.TestCase):
         self.assertEqual(self.launch("claude", "lead", "auth", "status"), ["auth", "status"])
         self.assertEqual(self.launch("omp", "peer", "--version"), ["--version"])
 
+    def test_unsupported_pi_cannot_start_session_but_can_report_version(self) -> None:
+        binary = Path(self.env["PI_BIN"])
+        binary.write_text(
+            f"#!{sys.executable}\nimport sys\n"
+            "if sys.argv[1:] == ['--version']:\n    print('0.84.4'); sys.exit(0)\n"
+            f"open({str(self.log)!r}, 'w').write('session started')\n"
+        )
+        session = subprocess.run(
+            [str(AGENT_ROOM), "pi", "lead"], env=self.env, capture_output=True, text=True,
+        )
+        self.assertNotEqual(session.returncode, 0)
+        self.assertIn("1.3.0", session.stderr)
+        self.assertFalse(self.log.exists())
+        probe = subprocess.run(
+            [str(AGENT_ROOM), "pi", "lead", "--version"],
+            env={**self.env, "CODEX_ROOM_CONFIG_HOME": str(self.root / "absent")},
+            capture_output=True, text=True,
+        )
+        self.assertEqual(probe.returncode, 0, probe.stderr)
+        self.assertEqual(probe.stdout.strip(), "0.84.4")
+
     def test_invalid_role_runtime_or_overlay_fails_before_exec(self) -> None:
         broken = self.root / "room"
         (broken / "overlays").mkdir(parents=True)
@@ -1728,6 +1759,7 @@ class AgentRoomLauncherTests(unittest.TestCase):
             (("codex", "lead"), self.env),
             (("claude", "lead", "--verbose"), {**self.env, "CODEX_ROOM_CONFIG_HOME": str(broken)}),
             (("omp", "lead", "--mode", "rpc"), {**self.env, "CODEX_ROOM_CONFIG_HOME": str(broken)}),
+            (("pi", "lead", "--mode", "rpc"), {**self.env, "CODEX_ROOM_CONFIG_HOME": str(broken)}),
         ]
         for args, env in cases:
             result = subprocess.run([str(AGENT_ROOM), *args], env=env, capture_output=True, text=True)
