@@ -1761,6 +1761,45 @@ class AgentRoomLauncherTests(unittest.TestCase):
         self.assertEqual(probe.returncode, 0, probe.stderr)
         self.assertEqual(probe.stdout.strip(), "0.84.4")
 
+    def test_pre_311_python3_on_path_reexecs_under_newer_interpreter(self) -> None:
+        # Paseo's daemon PATH can resolve ``python3`` to macOS /usr/bin/python3 (3.9).
+        bin_dir = self.root / "bin"
+        bin_dir.mkdir()
+        old_python = bin_dir / "python3"
+        old_python.write_text(
+            "#!/bin/sh\n"
+            f"exec {shlex.quote(sys.executable)} -c "
+            "'import runpy, sys; sys.modules[\"tomllib\"] = None; sys.argv = sys.argv[1:]; "
+            "runpy.run_path(sys.argv[0], run_name=\"__main__\")' \"$@\"\n"
+        )
+        old_python.chmod(0o755)
+        env = {**self.env, "PATH": str(bin_dir)}
+
+        def run_old() -> subprocess.CompletedProcess[str]:
+            return subprocess.run(
+                [str(AGENT_ROOM), "omp", "peer"], env=env, capture_output=True, text=True, timeout=30,
+            )
+
+        result = run_old()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("requires Python 3.11+", result.stderr)
+
+        # A versioned name that is really the old interpreter is tried once, not re-execed forever.
+        (bin_dir / "python3.13").symlink_to(old_python)
+        result = run_old()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("requires Python 3.11+", result.stderr)
+        self.assertFalse(self.log.exists())
+
+        new_python = bin_dir / "python3.12"
+        new_python.write_text(f"#!/bin/sh\nexec {shlex.quote(sys.executable)} \"$@\"\n")
+        new_python.chmod(0o755)
+        self.env = env
+        argv = self.launch("omp", "peer", "--mode", "rpc-ui")
+        [prompt] = self.flag_values(argv, "--append-system-prompt")
+        self.assertTrue(prompt.startswith("Room role: Peer."))
+        self.assertEqual(argv[-2:], ["--mode", "rpc-ui"])
+
     def test_invalid_role_runtime_or_overlay_fails_before_exec(self) -> None:
         broken = self.root / "room"
         (broken / "overlays").mkdir(parents=True)

@@ -29,18 +29,22 @@ The operator's `~/.codex` is incomplete for this setup. Check the exact missing 
    daemon's PATH or set through `CLAUDE_BIN`/`OMP_BIN`/`PI_BIN`.
 2. `agent-room` fails before exec when the role overlay has no
    `developer_instructions` or the omp-specific `omp-room.config.yml` is missing.
-3. Claude receives the role from a `SessionStart` hook; setting
+3. `agent-room` needs Python 3.11+ (`tomllib`). When the daemon PATH resolves
+   `python3` to an older interpreter (macOS `/usr/bin/python3` is 3.9), it
+   re-execs under the first `python3.14`…`python3.11` on that PATH and fails
+   with `requires Python 3.11+` when none is found.
+4. Claude receives the role from a `SessionStart` hook; setting
    `disableAllHooks` in operator Claude settings removes it.
-4. Role changes apply to new sessions only.
-5. Pi is pi.dev, not omp: check `agent-room pi lead --version`. Pi roles use
+5. Role changes apply to new sessions only.
+6. Pi is pi.dev, not omp: check `agent-room pi lead --version`. Pi roles use
    `--mode rpc`; do not add omp's `--config` or `rpc-ui` flags. Pi custom
    extensions can rewrite prompts/tools; inspect those separately when
    debugging role behavior. Setup does not alter `~/.pi/agent` or credentials.
-6. Pi orchestration requires >=1.3.0 and the managed
+7. Pi orchestration requires >=1.3.0 and the managed
    `~/.config/codex-room/pi-mcp-adapter.mjs`. Do not disable/replace builtin
    MCP. A native `mcp.json` entry shadowing the injected Paseo server must
    be resolved by the operator; setup will not overwrite it.
-7. An interactive `agent-room pi lead` alone has no Paseo endpoint/token.
+8. An interactive `agent-room pi lead` alone has no Paseo endpoint/token.
    Use `pi-lead` or `pi-supervisor` through Paseo for automatic orchestration
    delivery. Provider policy or `get_state` success alone does not prove tools
    arrived.

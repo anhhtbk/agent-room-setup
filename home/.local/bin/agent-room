@@ -34,7 +34,26 @@ import shlex
 import shutil
 import subprocess
 import sys
-import tomllib
+
+REEXEC_TRIED = "CODEX_ROOM_PYTHON_TRIED"
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    # Paseo runs this launcher with the daemon PATH, where ``python3`` can be a
+    # pre-3.11 system interpreter (macOS /usr/bin/python3 is 3.9). A versioned
+    # name can also resolve to an old interpreter, so each one is tried at most
+    # once across re-execs.
+    tried = set(filter(None, os.environ.get(REEXEC_TRIED, "").split(os.pathsep)))
+    tried.add(os.path.realpath(sys.executable))
+    for candidate in ("python3.14", "python3.13", "python3.12", "python3.11"):
+        interpreter = shutil.which(candidate)
+        if interpreter and os.path.realpath(interpreter) not in tried:
+            tried.add(os.path.realpath(interpreter))
+            os.environ[REEXEC_TRIED] = os.pathsep.join(sorted(tried))
+            os.execv(interpreter, [interpreter, *sys.argv])
+    raise SystemExit("agent-room requires Python 3.11+ (tomllib); none found on PATH")
+os.environ.pop(REEXEC_TRIED, None)
 
 
 RUNTIMES = ("claude", "omp", "pi")
