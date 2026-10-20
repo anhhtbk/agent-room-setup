@@ -117,7 +117,8 @@
         ],
         "paseoTools": {
           "enabled": true
-        }
+        },
+        "enabled": false
       },
       "codex-peer": {
         "extends": "codex",
@@ -190,7 +191,8 @@
         ],
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "enabled": false
       },
       "grok": {
         "extends": "acp",
@@ -204,10 +206,11 @@
         "env": {},
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "enabled": false
       },
       "pi": {
-        "enabled": true,
+        "enabled": false,
         "paseoTools": {
           "enabled": false
         },
@@ -289,6 +292,18 @@
           "enabled": false
         }
       },
+      "antigravity": {
+        "enabled": false,
+        "paseoTools": {
+          "enabled": false
+        }
+      },
+      "muse": {
+        "enabled": false,
+        "paseoTools": {
+          "enabled": false
+        }
+      },
       "hermes": {
         "extends": "acp",
         "label": "Hermes",
@@ -300,7 +315,8 @@
         "env": {},
         "paseoTools": {
           "enabled": false
-        }
+        },
+        "enabled": false
       },
       "codex-lead": {
         "extends": "codex",
@@ -373,7 +389,8 @@
         ],
         "paseoTools": {
           "enabled": true
-        }
+        },
+        "enabled": false
       },
       "claude-supervisor": {
         "extends": "claude",
@@ -482,7 +499,8 @@
               }
             ]
           }
-        ]
+        ],
+        "enabled": false
       },
       "claude-lead": {
         "extends": "claude",
@@ -591,7 +609,8 @@
               }
             ]
           }
-        ]
+        ],
+        "enabled": false
       },
       "claude-peer": {
         "extends": "claude",
@@ -700,7 +719,8 @@
               }
             ]
           }
-        ]
+        ],
+        "enabled": false
       },
       "omp-supervisor": {
         "extends": "omp",
@@ -1291,7 +1311,8 @@
               }
             ]
           }
-        ]
+        ],
+        "enabled": false
       },
       "pi-lead": {
         "extends": "pi",
@@ -1369,7 +1390,8 @@
               }
             ]
           }
-        ]
+        ],
+        "enabled": false
       },
       "pi-peer": {
         "extends": "pi",
@@ -1447,7 +1469,8 @@
               }
             ]
           }
-        ]
+        ],
+        "enabled": false
       },
       "claude": {
         "paseoTools": {
@@ -1548,7 +1571,8 @@
               }
             ]
           }
-        ]
+        ],
+        "enabled": false
       },
       "codex": {
         "paseoTools": {
