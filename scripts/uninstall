@@ -56,6 +56,7 @@ done <<'EOF'
 .config/codex-room/tools/worktree-guard.py|.config/codex-room/tools/worktree-guard.py
 .config/codex-room/tools/run-procs.py|.config/codex-room/tools/run-procs.py
 .config/codex-room/tools/room-gc.py|.config/codex-room/tools/room-gc.py
+.config/codex-room/tools/room-close.py|.config/codex-room/tools/room-close.py
 .config/codex-room/tools/paseo-release.py|.config/codex-room/tools/paseo-release.py
 .config/codex-room/tools/paseo-pi-contract.mjs|.config/codex-room/tools/paseo-pi-contract.mjs
 .local/bin/codex-room|.local/bin/codex-room

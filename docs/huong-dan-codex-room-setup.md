@@ -68,12 +68,23 @@ project) cùng bảng ánh xạ Room ở `~/.config/codex-room/workflow/IMPLEMEN
   disposition); `run-procs.py` chạy lệnh trong process group của run và chỉ
   dừng group đó; `room-gc.py` báo dung lượng và xóa `$RUN/cache` (môi trường
   xác minh, build, dữ liệu DB dựng lại được), từ chối khi còn process sống
-  trong `$RUN/procs`.
+  trong `$RUN/procs`; `room-close.py` dọn toàn bộ những gì run đã tạo khi
+  `<slug>/integration` đã merge vào nhánh làm việc.
 - Dọn dung lượng: Lead xóa cache của candidate khi candidate đã chốt và xóa cả
   `$RUN/cache` ở bước Finish. Xem tay:
   `python3 ~/.config/codex-room/tools/room-gc.py report <thư mục spec>`; đặt
   `CODEX_ROOM_RUN_ROOTS` (phân tách bằng `:`) để `make doctor` báo cả các spec
   folder ngoài `~/.local/state/codex-room/runs`.
+- Dọn sau khi merge (Human đã cho phép trước): khi `<slug>/integration` của
+  mọi repo đã merge vào nhánh làm việc, Lead chạy
+  `room-close.py close --slug <slug> --repo <R>... --run $RUN` (dry run, rồi
+  `--apply`). Tool archive workspace và xóa Paseo project của từng worktree
+  (Paseo giữ file), `git worktree remove` các worktree sạch đã merge, xóa
+  branch `<slug>/*` đã merge (in SHA để khôi phục), rồi xóa `$RUN`. Checkout
+  chính, project/workspace gốc của Human và branch khác không bị đụng. Worktree
+  bẩn/chưa merge là `KEEP` và hỏi Human; branch attempt bị reject chỉ xóa bằng
+  `--drop-unmerged` khi Human đồng ý. `room-close.py scan --repo <R>` liệt kê
+  các run còn sót trong repo.
 - Câu hỏi kỹ thuật Lead tự trả lời; câu hỏi nghiệp vụ Lead hỏi Human trong chat
   và chỉ tiếp tục các ticket độc lập với câu hỏi.
 

@@ -132,6 +132,7 @@ MANAGED_FILES = (
     (".config/codex-room/tools/worktree-guard.py", ".config/codex-room/tools/worktree-guard.py", 0o755),
     (".config/codex-room/tools/run-procs.py", ".config/codex-room/tools/run-procs.py", 0o755),
     (".config/codex-room/tools/room-gc.py", ".config/codex-room/tools/room-gc.py", 0o755),
+    (".config/codex-room/tools/room-close.py", ".config/codex-room/tools/room-close.py", 0o755),
     (".config/codex-room/tools/paseo-release.py", ".config/codex-room/tools/paseo-release.py", 0o755),
     (".config/codex-room/tools/paseo-pi-contract.mjs", ".config/codex-room/tools/paseo-pi-contract.mjs", 0o755),
     (".local/bin/codex-room", ".local/bin/codex-room", 0o755),

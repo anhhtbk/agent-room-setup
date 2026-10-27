@@ -7,7 +7,7 @@
 ~/.config/codex-room/omp-room.config.yml
 ~/.config/codex-room/pi-mcp-adapter.mjs
 ~/.config/codex-room/overlays/*.config.toml
-~/.config/codex-room/tools/{tree-audit,worktree-guard,run-procs,room-gc,paseo-release}.py
+~/.config/codex-room/tools/{tree-audit,worktree-guard,run-procs,room-gc,room-close,paseo-release}.py
 ~/.config/codex-room/tools/paseo-pi-contract.mjs
 ~/.config/codex-room/workflow/IMPLEMENT_SPEC.md
 ~/.config/codex-room/workflow/WORKSPACE_PROTOCOL.md

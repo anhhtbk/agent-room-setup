@@ -51,6 +51,12 @@ evidence, then continue ready work without creating another approval gate.
 - Preserve unrelated work and existing private notebooks, runtime/session
   state, and operator-owned `.codex` bytes. The setup must not silently take
   ownership of them.
+- Once the work is merged into the working branch, Lead removes what the room
+  created for it: local branches, worktrees, adopted Paseo workspaces and the
+  Paseo projects registered for them, Peer agents, and run state. Human's own
+  checkout, Paseo project, workspaces, and branches stay. Anything that is not
+  proven merged and clean stays and goes to Human. `IMPLEMENT_SPEC.md` (Close)
+  gives the tool for its layout.
 
 ## Ready inputs and continuity
 

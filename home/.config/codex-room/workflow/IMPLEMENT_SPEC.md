@@ -132,7 +132,9 @@ states:
   `python3 $T/tree-audit.py check $RUN/baseline.json --quiet-point`;
   `python3 $T/run-procs.py stop` on every registry under `$RUN/procs/`, then
   `python3 $T/room-gc.py clean $RUN --apply`; report each
-  `<slug>/integration` branch and SHA, and the `SUMMARY` line.
+  `<slug>/integration` branch and SHA, and the `SUMMARY` line. When the
+  integration branches are already merged into the working branch, run Close
+  below in the same turn.
 
 ## Cleanup
 
@@ -145,9 +147,11 @@ records on a writer's behalf.
 
 At skill step 9, per ticket-attempt worktree (accepted or rejected): archive
 its adopted workspace (the response must show `removedDirectory: false`), then
-`python3 $T/worktree-guard.py remove <manifest> --owner <slug> --digest <digest from the disposition>`.
-`REFUSE`, `DIFF`, or `PARTIAL`: keep what is left and ask Human. Branches,
-integration worktrees, and their workspaces stay for Human.
+`python3 $T/worktree-guard.py remove <manifest> --owner <slug> --digest <digest from the disposition>`,
+then delete the Paseo project registered for that path (files stay):
+`paseo project ls --json` gives the `projectId` whose `path` is `X_R`;
+`paseo project delete <projectId>`. `REFUSE`, `DIFF`, or `PARTIAL`: keep what
+is left and ask Human. Branches and integration worktrees stay until Close.
 
 A candidate's `CACHE` entry is disposable once that candidate is accepted,
 rejected, or superseded and its evidence is written outside `CACHE`: stop its
@@ -156,3 +160,26 @@ registry with `run-procs.py stop`, then
 runnable output of a build inside an entry; intermediate build trees go as
 soon as the runnable output exists. `REFUSE` from `room-gc.py`: stop the named
 record, never delete around it.
+
+## Close
+
+Human has authorized this cleanup in advance. Run it once `<slug>/integration`
+of every `R` is an ancestor of R's working branch (the branch Human works on,
+normally R's main checkout branch; `<base>` when Human merged there): at
+Finish, when Human reports the merge, or at session resumption when Lead
+finds it. Merging into the working branch itself stays Human's decision.
+
+    python3 $T/room-close.py close --slug <slug> --repo <R>... [--into <working branch>]... [--root <W_R>]... --run $RUN
+
+The dry run lists every Paseo workspace, Paseo project, worktree, `<slug>/*`
+branch, and `$RUN` it would remove; then rerun with `--apply`. It removes only
+what this run created under the naming above; R's main checkout, its Paseo
+project and workspaces, other branches, and Peer agents outside those
+workspaces stay. Archiving a workspace archives the Peers in it.
+
+Report the `REMOVED` and `KEEP` lines and `SUMMARY`. A `KEEP` worktree (dirty,
+unmerged, locked, misnamed) is Human's decision; never force it. `KEEP` branch
+lines for unmerged attempts: list them with their SHAs and rerun with
+`--drop-unmerged` only when Human agrees. `REFUSE` (integration not merged,
+`paseo` unavailable) changes nothing. `PARTIAL`: report what is gone and what
+is left, and ask Human.

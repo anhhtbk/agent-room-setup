@@ -45,7 +45,7 @@ for name in WORKSPACE_PROTOCOL.md IMPLEMENT_SPEC.md; do
 done
 export_one "$HOME/.config/codex-room/omp-room.config.yml" "$REPO_ROOT/home/.config/codex-room/omp-room.config.yml"
 export_one "$HOME/.config/codex-room/pi-mcp-adapter.mjs" "$REPO_ROOT/home/.config/codex-room/pi-mcp-adapter.mjs"
-for name in tree-audit.py worktree-guard.py run-procs.py room-gc.py paseo-release.py paseo-pi-contract.mjs; do
+for name in tree-audit.py worktree-guard.py run-procs.py room-gc.py room-close.py paseo-release.py paseo-pi-contract.mjs; do
   export_one "$HOME/.config/codex-room/tools/$name" "$REPO_ROOT/home/.config/codex-room/tools/$name"
 done
 for name in codex-room codex-room-sync agent-room paseo-local-update; do

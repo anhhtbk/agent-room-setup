@@ -99,7 +99,7 @@ check "Paseo provenance manifest exists" test -f "$REPO_ROOT/paseo/source.toml"
 check "Paseo manifest selects the latest stable channel" grep -Fxq 'release_channel = "latest-stable"' "$REPO_ROOT/paseo/source.toml"
 check "Paseo manifest carries no fixed release pin" bash -c '! grep -Eq "^(release_tag|verified_commit|verified_describe) =" "$1"' bash "$REPO_ROOT/paseo/source.toml"
 check "implement-spec Room mapping exists" test -f "$workflow_root/IMPLEMENT_SPEC.md"
-for tool in tree-audit.py worktree-guard.py run-procs.py room-gc.py paseo-release.py paseo-pi-contract.mjs; do
+for tool in tree-audit.py worktree-guard.py run-procs.py room-gc.py room-close.py paseo-release.py paseo-pi-contract.mjs; do
   check "room tool $tool is executable" test -x "$tools_root/$tool"
 done
 check "Pi contract probe syntax" node --check "$tools_root/paseo-pi-contract.mjs"

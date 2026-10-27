@@ -204,7 +204,12 @@ equals the writer's handoff baseline; `run-procs.py` runs commands in a
 run-owned process group and stops only that group; `room-gc.py` reports and
 deletes the rebuildable `$RUN/cache`, refusing while a registered process
 still uses it (`make doctor` reports run directories under
-`~/.local/state/codex-room/runs` and `CODEX_ROOM_RUN_ROOTS`).
+`~/.local/state/codex-room/runs` and `CODEX_ROOM_RUN_ROOTS`); `room-close.py`
+runs once `<slug>/integration` is merged into the working branch and removes
+that run's worktrees, `<slug>/*` branches, adopted Paseo workspaces, the Paseo
+projects registered for them, and `$RUN`, keeping the main checkout and its
+project, and anything dirty or unmerged (`room-close.py scan --repo R` lists
+leftover runs in a repository).
 
 ## Claude Code, omp, and Pi roles
 
