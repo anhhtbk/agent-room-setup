@@ -38,6 +38,10 @@ install_one() {
   [[ -f "$source_path" ]] || die "source file is missing: $source_path"
   temporary=$(mktemp "${TMPDIR:-/tmp}/codex-room-install.XXXXXX")
   render_home_tokens "$source_path" "$temporary"
+  if [[ "$relative_target" == .paseo/config.json ]]; then
+    # Paseo stores plugin registrations in the same file; keep them.
+    python3 "$REPO_ROOT/scripts/lib/paseo_config.py" carry "$temporary" "$target_path" "$temporary"
+  fi
 
   if [[ -f "$target_path" ]] && cmp -s "$temporary" "$target_path"; then
     log "UNCHANGED  ~/$relative_target"

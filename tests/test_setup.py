@@ -759,19 +759,8 @@ class SetupShapeTests(unittest.TestCase):
         lead = (ROOM / "overlays" / "lead.config.toml").read_text()
         peer = (ROOM / "overlays" / "peer.config.toml").read_text()
         supervisor = (ROOM / "overlays" / "supervisor.config.toml").read_text()
-        self.assertIn("Run writable Peers in parallel only", lead)
-        self.assertIn("accepted inputs and a separate write scope", lead)
-        self.assertIn("Sequence changes to shared files or interfaces", lead)
-        self.assertIn("At session resumption", lead)
-        self.assertIn("outdated task descriptions", lead)
-        self.assertIn("create a duplicate tracker", lead)
-        self.assertIn("notify Lead before making those changes", peer)
-        self.assertIn("verification environment, reproduction steps, actual results", peer)
-        self.assertIn("durable evidence locations", peer)
         for active in (protocol, lead):
             self.assertNotIn("at most one active", active)
-        self.assertIn("fresh read-only Peer", lead)
-        self.assertIn("explicitly ACCEPT or REJECT", lead)
         self.assertFalse((ROOM / "overlays" / "review.config.toml").exists())
         self.assertNotIn("codex-review", lead)
         self.assertIn("REOPEN_REQUEST", peer)
@@ -913,6 +902,27 @@ class PublicInstallTransactionTests(unittest.TestCase):
         verify = self.run_install(("--verify",), env)
         self.assertEqual(verify.returncode, 0, verify.stdout + verify.stderr)
         self.assertEqual((self.root / "verify.log").read_text().splitlines()[-1], "--live")
+
+    def test_apply_keeps_paseo_plugin_registrations_and_template_ownership(self) -> None:
+        env = self.lifecycle_env(self.make_fake_paseo(), self.make_fake_verifier())
+        self.assertEqual(self.run_install(("--apply",), env).returncode, 0)
+        config_path = self.home / ".paseo/config.json"
+        config = json.loads(config_path.read_text())
+        plugins = {"room-watch": {"enabled": True, "path": "/opt/room-watch", "source": "directory"}}
+        config["plugins"] = plugins
+        config["pluginsEnabled"] = True
+        config["agents"]["providers"]["omp-lead"]["label"] = "operator drift"
+        config_path.write_text(json.dumps(config))
+        plan = self.run_install((), env)
+        self.assertIn(f"REPLACE {config_path.resolve()}", plan.stdout)
+        result = self.run_install(("--apply",), env)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        installed = json.loads(config_path.read_text())
+        self.assertEqual(installed["plugins"], plugins)
+        self.assertIs(installed["pluginsEnabled"], True)
+        # Every other key still comes from the template.
+        self.assertNotEqual(installed["agents"]["providers"]["omp-lead"]["label"], "operator drift")
+        self.assertIn(f"UNCHANGED {config_path.resolve()}", self.run_install((), env).stdout)
 
     def test_install_without_codex_preserves_optional_state(self) -> None:
         import shutil

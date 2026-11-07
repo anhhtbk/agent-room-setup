@@ -4,6 +4,7 @@
 .vscode/
 __pycache__/
 *.pyc
+node_modules/
 
 # Exported/generated private state must never enter Git
 home/.codex/

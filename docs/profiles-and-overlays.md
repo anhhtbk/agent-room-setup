@@ -74,6 +74,19 @@ compile/shell checks; `scripts/verify --source` returned `VERIFY_OK` and
 `git diff --check` passed. These checks cover configuration/integration, not
 agent behavior. No new phrase-matching tests or behavioral-success claim added.
 
+## Single source for shared rules (2026-11-04)
+
+`WORKSPACE_PROTOCOL.md` is the only source for rules every role shares:
+authority, dispatch brief contents, parallel-Peer limits, Peer signals,
+evidence and handoff fields, and loop closure. Overlays keep only role-specific
+behavior and point to the contract section by name; every role reads the
+contract at session start. A week of omp sessions showed 28/28 Peers read it.
+Lead shrank from 866 to 424 words, Peer from 525 to 295. The Supervisor's
+primary wake-up is now the `room-watch` plugin (see operations.md): 166
+two-minute heartbeat wakes in that week produced 5 Lead messages, each for a
+turn end, permission, or stall the plugin now reports directly. The heartbeat
+remains only as a ten-minute fallback when the plugin's tools are missing.
+
 The Peer overlay owns one bounded implementation, investigation, architecture,
 or read-only candidate review outcome. Peer has no Paseo MCP injection and its
 role instructions forbid coordinating other seats.

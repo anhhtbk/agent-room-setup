@@ -52,5 +52,7 @@ for name in codex-room codex-room-sync agent-room paseo-local-update; do
   export_one "$HOME/.local/bin/$name" "$REPO_ROOT/home/.local/bin/$name"
 done
 export_one "$HOME/.paseo/config.json" "$REPO_ROOT/home/.paseo/config.json.template"
+# Plugin registrations are operator-owned; keep them out of the template.
+python3 "$REPO_ROOT/scripts/lib/paseo_config.py" strip "$REPO_ROOT/home/.paseo/config.json.template" "$REPO_ROOT/home/.paseo/config.json.template"
 
 log "EXPORT_COMPLETE"

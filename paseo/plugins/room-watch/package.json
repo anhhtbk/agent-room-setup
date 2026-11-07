@@ -1,0 +1,17 @@
+{
+  "name": "room-watch",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "@getpaseo/client": "^0.15.0",
+    "@getpaseo/plugin": "^0.15.0",
+    "@getpaseo/protocol": "^0.15.0",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "zod": "^4.6.7"
+  }
+}

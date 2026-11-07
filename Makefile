@@ -6,6 +6,7 @@ doctor:
 test:
 	python3 -m unittest discover -s tests -v
 	python3 -m py_compile scripts/install-room
+	node --test paseo/plugins/room-watch/test/
 	@for script in scripts/* home/.local/bin/*; do \
 		[ -f "$$script" ] || continue; \
 		head -n 1 "$$script" | grep -Eq '(bash|zsh|sh)' || continue; \

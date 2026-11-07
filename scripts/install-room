@@ -32,6 +32,10 @@ VERIFY_SOURCE = ROOT / "scripts" / "verify"
 PASEO_SOURCE = ROOT / "scripts" / "install-paseo"
 PASEO_RELEASE_SOURCE = ROOT / "home" / ".config" / "codex-room" / "tools" / "paseo-release.py"
 LEGACY_SOURCE_ROOT = ROOT / "paseo" / "legacy"
+PASEO_CONFIG = ".paseo/config.json"
+
+sys.path.insert(0, str(ROOT / "scripts" / "lib"))
+from paseo_config import carry_operator_keys  # noqa: E402
 
 ROLES = ("supervisor", "lead", "peer")
 
@@ -496,6 +500,14 @@ def safe_read_source(relative: str) -> Path:
     if not path.is_file():
         fail(f"tracked installer source is missing: {path}")
     return path
+
+
+def managed_bytes(source: Path, home: Path, relative: str) -> bytes:
+    rendered = source.read_bytes().replace(b"@@HOME@@", str(home).encode())
+    if relative == PASEO_CONFIG:
+        # Paseo stores plugin registrations in the same file; keep them.
+        return carry_operator_keys(rendered, home / relative)
+    return rendered
 
 
 def render_source(source: Path, home: Path, destination: Path) -> None:
@@ -1109,9 +1121,9 @@ class Transaction:
 def stage_home(stage: Path, home: Path) -> dict[str, Path]:
     rendered: dict[str, Path] = {}
     for source_relative, target_relative, mode in MANAGED_FILES:
-        source = safe_read_source(source_relative)
         destination = stage / "home" / target_relative
-        render_source(source, home, destination)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(managed_bytes(safe_read_source(source_relative), home, target_relative))
         destination.chmod(mode)
         rendered[target_relative] = destination
     return rendered
@@ -1127,7 +1139,7 @@ def print_plan(home: Path) -> int:
     out("INSTALL   managed HOME files:")
     for source_relative, relative, mode in MANAGED_FILES:
         target = home / relative
-        expected = safe_read_source(source_relative).read_bytes().replace(b"@@HOME@@", str(home).encode())
+        expected = managed_bytes(safe_read_source(source_relative), home, relative)
         state = (
             "unchanged"
             if target.is_file()

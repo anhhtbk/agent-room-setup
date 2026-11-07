@@ -1,0 +1,8 @@
+{
+  "id": "room-watch",
+  "name": "Room watch",
+  "description": "Wakes a Room Supervisor on Lead/Peer turn ends, pending permissions, archives, long Lead turns, and stalled rooms.",
+  "requirements": {
+    "paseo": ">=0.15.0"
+  }
+}

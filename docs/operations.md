@@ -31,22 +31,50 @@ message to Lead. Private conversations remain private; Lead receives only a
 needed project decision or an evidence-based open question about actual drift.
 Healthy work does not require periodic Lead reports.
 
-The Supervisor uses events and one self-targeted Paseo heartbeat every two
-minutes where event coverage is incomplete. It checks existing schedules to
-avoid duplicates and deletes its heartbeat when supervision ends. This provides
-periodic checks, not guaranteed detection latency. A necessary
-message uses `background=true` with `notifyOnFinish=true`; notifications from
-that turn do not subscribe to all future Lead/Peer activity. Tool failures must
-be reported as monitoring gaps. No heartbeat is created by installation: the
-new Supervisor establishes it when assigned supervision.
+The Supervisor's wake-up is the `room-watch` Paseo plugin
+(`paseo/plugins/room-watch`). It watches every agent a Supervisor creates and
+their descendants (through `parentAgentId`); `room_watch_add` adopts an
+existing Lead. While the Supervisor is idle it receives one `<room-watch>`
+message batching:
+
+- Lead/Peer turn ends (completed, failed, canceled), after a 30 s debounce;
+- pending permissions or questions, and room stalls, immediately;
+- archives of watched agents;
+- a checkpoint every 30 min while a Lead stays in one turn;
+- a stall when a watched agent is running and no watched agent has added a
+  timeline entry for 8 min (once per episode). Updates inside one entry, such
+  as a tool waiting on a background job or one long build, do not count, so a
+  single long command also reports as a stall.
+
+Supervisors get `room_watch_add`, `room_watch_remove`, and `room_watch_list`.
+Only when those tools are missing does the Supervisor fall back to one
+ten-minute Paseo heartbeat. Thresholds can be overridden in
+`~/.config/codex-room/room-watch.json`
+(`stallMinutes`, `checkpointMinutes`, `debounceSeconds`); watch state lives in
+`~/.local/state/codex-room/room-watch.json`.
+
+Install or update the plugin from this checkout:
+
+```bash
+cd paseo/plugins/room-watch && npm install && npm run typecheck && npm test
+paseo plugin install "$PWD"   # first time; later: paseo plugin reload room-watch
+```
+
+Limits: the plugin receives the Paseo SDK only through hooks and tools, so
+after a plugin reload or daemon restart its timer starts at the first agent
+event on the daemon. Queued, undelivered events live in memory and are lost on
+reload. `./install --apply` keeps `plugins` and `pluginsEnabled` from the
+installed `~/.paseo/config.json` (`scripts/lib/paseo_config.py`); every other
+key comes from the template, and `scripts/export-current` leaves those two
+keys out of the template.
 
 After syncing an overlay, create a new Supervisor session to test it; existing
 sessions can retain earlier instructions and conversation history. Check that
-assignment creates a self-targeted heartbeat without messaging a healthy Lead,
-that a real ownership/dependency/acceptance deviation elicits one concise open
-question without private attribution, and that unchanged state produces no
-repeat. Confirm the heartbeat is removed when supervision stops. Prompt and
-runtime checks alone do not establish this behavioral acceptance.
+assignment does not message a healthy Lead, that a real
+ownership/dependency/acceptance deviation elicits one concise open question
+without private attribution, and that a `<room-watch>` wake with nothing
+actionable produces a one-line reply. Prompt and runtime checks alone do not
+establish this behavioral acceptance.
 
 ### Project handoff
 
