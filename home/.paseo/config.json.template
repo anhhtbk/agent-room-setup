@@ -499,8 +499,7 @@
               }
             ]
           }
-        ],
-        "enabled": false
+        ]
       },
       "claude-lead": {
         "extends": "claude",
@@ -609,8 +608,7 @@
               }
             ]
           }
-        ],
-        "enabled": false
+        ]
       },
       "claude-peer": {
         "extends": "claude",
@@ -719,8 +717,7 @@
             ],
             "isDefault": true
           }
-        ],
-        "enabled": false
+        ]
       },
       "omp-supervisor": {
         "extends": "omp",
