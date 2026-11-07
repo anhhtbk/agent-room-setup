@@ -214,6 +214,9 @@ class PaseoReleaseTests(unittest.TestCase):
                 {"id": "apple/on-device", "label": "On device", "thinkingOptions": [extra]}),
             "retired Codex Sol": lambda c: c["agents"]["providers"]["codex-peer"]["models"].append(
                 {"id": "gpt-5.6-sol", "label": "Sol", "thinkingOptions": [extra]}),
+            "GPT on omp": lambda c: c["agents"]["providers"]["omp"]["models"].append(
+                {"id": "openai-codex/gpt-6.1-sol", "label": "Sol", "thinkingOptions": [extra]}),
+            "GPT seat enabled": lambda c: c["agents"]["providers"]["pi-lead"].update(enabled=True),
             "Claude on Pi": lambda c: c["agents"]["providers"]["pi"]["models"].append(
                 {"id": "anthropic/claude-opus-5-5", "label": "Opus", "thinkingOptions": [extra]}),
             "runtime catalog inherited": lambda c: c["agents"]["providers"]["pi-lead"].pop("models"),

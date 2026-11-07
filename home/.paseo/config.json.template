@@ -628,7 +628,6 @@
           {
             "id": "claude-opus-5-5",
             "label": "Opus 5.5",
-            "isDefault": true,
             "thinkingOptions": [
               {
                 "id": "low",
@@ -717,7 +716,8 @@
                 "id": "ultracode",
                 "label": "Ultra Code"
               }
-            ]
+            ],
+            "isDefault": true
           }
         ],
         "enabled": false
@@ -801,68 +801,6 @@
           {
             "id": "anthropic/claude-sonnet-5-5",
             "label": "Claude Sonnet 5.5",
-            "thinkingOptions": [
-              {
-                "id": "auto",
-                "label": "Auto"
-              },
-              {
-                "id": "low",
-                "label": "Low",
-                "isDefault": true
-              },
-              {
-                "id": "medium",
-                "label": "Medium"
-              },
-              {
-                "id": "high",
-                "label": "High"
-              },
-              {
-                "id": "xhigh",
-                "label": "XHigh"
-              },
-              {
-                "id": "max",
-                "label": "Max"
-              }
-            ]
-          },
-          {
-            "id": "openai-codex/gpt-6-astra",
-            "label": "GPT-6-Astra",
-            "thinkingOptions": [
-              {
-                "id": "auto",
-                "label": "Auto"
-              },
-              {
-                "id": "low",
-                "label": "Low",
-                "isDefault": true
-              },
-              {
-                "id": "medium",
-                "label": "Medium"
-              },
-              {
-                "id": "high",
-                "label": "High"
-              },
-              {
-                "id": "xhigh",
-                "label": "XHigh"
-              },
-              {
-                "id": "max",
-                "label": "Max"
-              }
-            ]
-          },
-          {
-            "id": "openai-codex/gpt-6.1-sol",
-            "label": "GPT-6.1-Sol",
             "thinkingOptions": [
               {
                 "id": "auto",
@@ -999,68 +937,6 @@
                 "label": "Max"
               }
             ]
-          },
-          {
-            "id": "openai-codex/gpt-6-astra",
-            "label": "GPT-6-Astra",
-            "thinkingOptions": [
-              {
-                "id": "auto",
-                "label": "Auto"
-              },
-              {
-                "id": "low",
-                "label": "Low",
-                "isDefault": true
-              },
-              {
-                "id": "medium",
-                "label": "Medium"
-              },
-              {
-                "id": "high",
-                "label": "High"
-              },
-              {
-                "id": "xhigh",
-                "label": "XHigh"
-              },
-              {
-                "id": "max",
-                "label": "Max"
-              }
-            ]
-          },
-          {
-            "id": "openai-codex/gpt-6.1-sol",
-            "label": "GPT-6.1-Sol",
-            "thinkingOptions": [
-              {
-                "id": "auto",
-                "label": "Auto"
-              },
-              {
-                "id": "low",
-                "label": "Low",
-                "isDefault": true
-              },
-              {
-                "id": "medium",
-                "label": "Medium"
-              },
-              {
-                "id": "high",
-                "label": "High"
-              },
-              {
-                "id": "xhigh",
-                "label": "XHigh"
-              },
-              {
-                "id": "max",
-                "label": "Max"
-              }
-            ]
           }
         ]
       },
@@ -1080,7 +956,6 @@
           {
             "id": "anthropic/claude-opus-5-5",
             "label": "Claude Opus 5.5",
-            "isDefault": true,
             "thinkingOptions": [
               {
                 "id": "auto",
@@ -1169,69 +1044,8 @@
                 "id": "max",
                 "label": "Max"
               }
-            ]
-          },
-          {
-            "id": "openai-codex/gpt-6-astra",
-            "label": "GPT-6-Astra",
-            "thinkingOptions": [
-              {
-                "id": "auto",
-                "label": "Auto"
-              },
-              {
-                "id": "low",
-                "label": "Low",
-                "isDefault": true
-              },
-              {
-                "id": "medium",
-                "label": "Medium"
-              },
-              {
-                "id": "high",
-                "label": "High"
-              },
-              {
-                "id": "xhigh",
-                "label": "XHigh"
-              },
-              {
-                "id": "max",
-                "label": "Max"
-              }
-            ]
-          },
-          {
-            "id": "openai-codex/gpt-6.1-sol",
-            "label": "GPT-6.1-Sol",
-            "thinkingOptions": [
-              {
-                "id": "auto",
-                "label": "Auto"
-              },
-              {
-                "id": "low",
-                "label": "Low",
-                "isDefault": true
-              },
-              {
-                "id": "medium",
-                "label": "Medium"
-              },
-              {
-                "id": "high",
-                "label": "High"
-              },
-              {
-                "id": "xhigh",
-                "label": "XHigh"
-              },
-              {
-                "id": "max",
-                "label": "Max"
-              }
-            ]
+            ],
+            "isDefault": true
           }
         ]
       },
@@ -1651,68 +1465,6 @@
           {
             "id": "anthropic/claude-sonnet-5-5",
             "label": "Claude Sonnet 5.5",
-            "thinkingOptions": [
-              {
-                "id": "auto",
-                "label": "Auto"
-              },
-              {
-                "id": "low",
-                "label": "Low",
-                "isDefault": true
-              },
-              {
-                "id": "medium",
-                "label": "Medium"
-              },
-              {
-                "id": "high",
-                "label": "High"
-              },
-              {
-                "id": "xhigh",
-                "label": "XHigh"
-              },
-              {
-                "id": "max",
-                "label": "Max"
-              }
-            ]
-          },
-          {
-            "id": "openai-codex/gpt-6-astra",
-            "label": "GPT-6-Astra",
-            "thinkingOptions": [
-              {
-                "id": "auto",
-                "label": "Auto"
-              },
-              {
-                "id": "low",
-                "label": "Low",
-                "isDefault": true
-              },
-              {
-                "id": "medium",
-                "label": "Medium"
-              },
-              {
-                "id": "high",
-                "label": "High"
-              },
-              {
-                "id": "xhigh",
-                "label": "XHigh"
-              },
-              {
-                "id": "max",
-                "label": "Max"
-              }
-            ]
-          },
-          {
-            "id": "openai-codex/gpt-6.1-sol",
-            "label": "GPT-6.1-Sol",
             "thinkingOptions": [
               {
                 "id": "auto",

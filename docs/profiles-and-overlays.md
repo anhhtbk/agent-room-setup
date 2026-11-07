@@ -12,12 +12,14 @@ Paseo shows a fixed Room model set (2026-10-19), declared as a static `models` l
 
 | Providers | Models (default first) | Thinking options (default) |
 | --- | --- | --- |
-| `claude`, `claude-*` | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5` | low…max, ultracode (Opus/Sonnet medium, Fable high) |
-| `omp-*` (and `omp` if enabled) | `anthropic/claude-opus-5-5`, `anthropic/claude-fable-5-1`, `anthropic/claude-sonnet-5-5`, `openai-codex/gpt-6-astra`, `openai-codex/gpt-6.1-sol` | auto, low…max (low) |
-| `pi`, `pi-*` | `openai-codex/gpt-6.1-sol`, `openai-codex/gpt-6-astra` (Pi's catalog has no Claude 5.x) | minimal…max (medium) |
-| `codex-*` | `gpt-6-astra`, `gpt-6.1-sol`; default per overlay | low…max (overlay effort; Peer Astra low) |
+| `claude`, `claude-*` | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`; `claude-peer` defaults to `claude-sonnet-5-5` | low…max, ultracode (Opus/Sonnet medium, Fable high) |
+| `omp`, `omp-*` | `anthropic/claude-opus-5-5`, `anthropic/claude-fable-5-1`, `anthropic/claude-sonnet-5-5`; `omp-peer` defaults to `anthropic/claude-sonnet-5-5` | auto, low…max (low) |
+| `pi`, `pi-*` (disabled) | `openai-codex/gpt-6.1-sol`, `openai-codex/gpt-6-astra` (Pi's catalog has no Claude 5.x) | minimal…max (medium) |
+| `codex-*` (disabled) | `gpt-6-astra`, `gpt-6.1-sol`; default per overlay | low…max (overlay effort; Peer Astra low) |
 
-Base `codex` is disabled: its runtime catalog offers neither Astra nor Sol 6.1. Thinking options and defaults are copied from the runtimes' own catalogs as of Paseo v0.11.4. `scripts/lib/paseo-models.jq` (run by `scripts/verify` and `scripts/export-current`) rejects other models, missing lists, or a model without exactly one default thinking option. When a runtime renames a model or its thinking levels, update the template and that check together.
+GPT models are disabled (2026-10-21): every `codex` and `pi` provider stays disabled and `omp` lists Claude models only. Paseo defaults (2026-10-21): Lead and Supervisor Opus 5.5, Peer Sonnet 5.5; the other listed models stay selectable per agent. Thinking options and defaults are copied from the runtimes' own catalogs as of Paseo v0.11.4. `scripts/lib/paseo-models.jq` (run by `scripts/verify` and `scripts/export-current`) rejects other models, missing lists, an enabled codex/pi provider, or a model without exactly one default thinking option. When a runtime renames a model or its thinking levels, update the template and that check together.
+
+The Codex overlay defaults below apply only if the codex providers are re-enabled.
 
 The selected defaults as of 2026-10-01 are Lead `gpt-6-astra` / `medium`,
 Supervisor and Peer `gpt-6.1-sol` / `medium`. This is an explicit operator
