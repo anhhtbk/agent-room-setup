@@ -438,8 +438,8 @@
             ]
           },
           {
-            "id": "claude-fable-5-1",
-            "label": "Fable 5.1",
+            "id": "claude-fable-5-2",
+            "label": "Fable 5.2",
             "thinkingOptions": [
               {
                 "id": "low",
@@ -547,8 +547,8 @@
             ]
           },
           {
-            "id": "claude-fable-5-1",
-            "label": "Fable 5.1",
+            "id": "claude-fable-5-2",
+            "label": "Fable 5.2",
             "thinkingOptions": [
               {
                 "id": "low",
@@ -655,8 +655,8 @@
             ]
           },
           {
-            "id": "claude-fable-5-1",
-            "label": "Fable 5.1",
+            "id": "claude-fable-5-2",
+            "label": "Fable 5.2",
             "thinkingOptions": [
               {
                 "id": "low",
@@ -765,8 +765,8 @@
             ]
           },
           {
-            "id": "anthropic/claude-fable-5-1",
-            "label": "Claude Fable 5.1",
+            "id": "anthropic/claude-fable-5-2",
+            "label": "Claude Fable 5.2",
             "thinkingOptions": [
               {
                 "id": "auto",
@@ -874,8 +874,8 @@
             ]
           },
           {
-            "id": "anthropic/claude-fable-5-1",
-            "label": "Claude Fable 5.1",
+            "id": "anthropic/claude-fable-5-2",
+            "label": "Claude Fable 5.2",
             "thinkingOptions": [
               {
                 "id": "auto",
@@ -982,8 +982,8 @@
             ]
           },
           {
-            "id": "anthropic/claude-fable-5-1",
-            "label": "Claude Fable 5.1",
+            "id": "anthropic/claude-fable-5-2",
+            "label": "Claude Fable 5.2",
             "thinkingOptions": [
               {
                 "id": "auto",
@@ -1321,8 +1321,8 @@
             ]
           },
           {
-            "id": "claude-fable-5-1",
-            "label": "Fable 5.1",
+            "id": "claude-fable-5-2",
+            "label": "Fable 5.2",
             "thinkingOptions": [
               {
                 "id": "low",
@@ -1429,8 +1429,8 @@
             ]
           },
           {
-            "id": "anthropic/claude-fable-5-1",
-            "label": "Claude Fable 5.1",
+            "id": "anthropic/claude-fable-5-2",
+            "label": "Claude Fable 5.2",
             "thinkingOptions": [
               {
                 "id": "auto",

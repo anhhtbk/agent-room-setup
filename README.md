@@ -227,7 +227,7 @@ source, and then execs the operator's `claude`, `omp`, or `pi`:
 | Home and login | operator `~/.claude` | operator `~/.omp` |
 
 Models, thinking, and permission mode come from the Paseo agent settings; the
-Codex-only overlay keys do not apply. Paseo lists only Claude Fable 5.1, Opus
+Codex-only overlay keys do not apply. Paseo lists only Claude Fable 5.2, Opus
 5.5 and Sonnet 5.5; Lead and Supervisor default to Opus 5.5, Peer to Sonnet 5.5,
 and any listed model can be chosen per agent. `claude-*` and `omp-*` roles are
 enabled; GPT models are disabled (codex and Pi providers off); see

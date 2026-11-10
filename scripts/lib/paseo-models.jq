@@ -2,9 +2,9 @@
 # runtime's discovered catalog. GPT models are disabled: every codex and pi
 # provider (GPT-only) must stay disabled, and omp lists Claude models only.
 {
-  claude: ["claude-fable-5-1", "claude-opus-5-5", "claude-sonnet-5-5"],
+  claude: ["claude-fable-5-2", "claude-opus-5-5", "claude-sonnet-5-5"],
   codex: ["gpt-6-astra", "gpt-6.1-sol"],
-  omp: ["anthropic/claude-fable-5-1", "anthropic/claude-opus-5-5", "anthropic/claude-sonnet-5-5"],
+  omp: ["anthropic/claude-fable-5-2", "anthropic/claude-opus-5-5", "anthropic/claude-sonnet-5-5"],
   pi: ["openai-codex/gpt-6-astra", "openai-codex/gpt-6.1-sol"]
 } as $allowed |
 def one_default: (map(select(.isDefault == true)) | length) == 1;

@@ -12,8 +12,8 @@ Paseo shows a fixed Room model set (2026-10-19), declared as a static `models` l
 
 | Providers | Models (default first) | Thinking options (default) |
 | --- | --- | --- |
-| `claude`, `claude-*` | `claude-opus-5-5`, `claude-fable-5-1`, `claude-sonnet-5-5`; `claude-peer` defaults to `claude-sonnet-5-5` | low…max, ultracode (Opus/Sonnet medium, Fable high) |
-| `omp`, `omp-*` | `anthropic/claude-opus-5-5`, `anthropic/claude-fable-5-1`, `anthropic/claude-sonnet-5-5`; `omp-peer` defaults to `anthropic/claude-sonnet-5-5` | auto, low…max (low) |
+| `claude`, `claude-*` | `claude-opus-5-5`, `claude-fable-5-2`, `claude-sonnet-5-5`; `claude-peer` defaults to `claude-sonnet-5-5` | low…max, ultracode (Opus/Sonnet medium, Fable high) |
+| `omp`, `omp-*` | `anthropic/claude-opus-5-5`, `anthropic/claude-fable-5-2`, `anthropic/claude-sonnet-5-5`; `omp-peer` defaults to `anthropic/claude-sonnet-5-5` | auto, low…max (low) |
 | `pi`, `pi-*` (disabled) | `openai-codex/gpt-6.1-sol`, `openai-codex/gpt-6-astra` (Pi's catalog has no Claude 5.x) | minimal…max (medium) |
 | `codex-*` (disabled) | `gpt-6-astra`, `gpt-6.1-sol`; default per overlay | low…max (overlay effort; Peer Astra low) |
 
