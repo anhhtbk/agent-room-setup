@@ -12,6 +12,8 @@ import tempfile
 import unittest
 
 GUARD = pathlib.Path(__file__).resolve().parents[1] / "home" / ".config" / "codex-room" / "tools" / "worktree-guard.py"
+# A git hook (e.g. pre-commit running this suite) exports GIT_INDEX_FILE and friends; keep fixtures on their own repos.
+BASE_ENV = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
 
 # Runs the guard in-process with `scan` wrapped, to land a write between the hash pass and the final lstat pass.
 LATE_WRITE = """
@@ -38,7 +40,7 @@ class Fixture:
     def __init__(self, base: pathlib.Path):
         self.base = base
         self.env = {
-            **os.environ, "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": str(base / "gitconfig"),
+            **BASE_ENV, "GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": str(base / "gitconfig"),
             "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
         }
         (base / "gitconfig").write_text("[protocol \"file\"]\n\tallow = always\n[init]\n\tdefaultBranch = main\n")

@@ -9,6 +9,8 @@ import tempfile
 import unittest
 
 CLOSE = pathlib.Path(__file__).resolve().parents[1] / "home" / ".config" / "codex-room" / "tools" / "room-close.py"
+# A git hook (e.g. pre-commit running this suite) exports GIT_INDEX_FILE and friends; keep fixtures on their own repos.
+BASE_ENV = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
 
 # Minimal stand-in for the Paseo CLI calls room-close.py makes; state lives in $FAKE_PASEO_STATE.
 FAKE_PASEO = """#!/usr/bin/env python3
@@ -52,14 +54,14 @@ class RoomCloseTest(unittest.TestCase):
         fake = self.dir / "paseo"
         fake.write_text(FAKE_PASEO)
         fake.chmod(0o755)
-        self.env = {**os.environ, "PASEO_BIN": str(fake), "FAKE_PASEO_STATE": str(self.state)}
+        self.env = {**BASE_ENV, "PASEO_BIN": str(fake), "FAKE_PASEO_STATE": str(self.state)}
         self.workspaces = [{"workspaceId": "wks_main", "cwd": str(self.repo)},
                            {"workspaceId": "wks_int", "cwd": str(self.integration)}]
         self.projects = [{"projectId": "prj_main", "path": str(self.repo)},
                          {"projectId": "prj_int", "path": str(self.integration)}]
 
     def git(self, cwd, *args) -> str:
-        env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+        env = {**BASE_ENV, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
                "GIT_COMMITTER_EMAIL": "t@t"}
         return subprocess.run(["git", "-C", str(cwd), *args], check=True, capture_output=True, text=True,
                               env=env).stdout.strip()
