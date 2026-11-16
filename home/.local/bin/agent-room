@@ -103,6 +103,29 @@ def role_instructions(role: str) -> str:
     return instructions.strip()
 
 
+def local_contract_note(cwd: str | None = None) -> str:
+    """State whether the launch project has a local contract, so no agent probes for it."""
+    start = pathlib.Path(cwd or os.getcwd())
+    top = start
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            top = pathlib.Path(result.stdout.strip())
+    except (OSError, subprocess.SubprocessError):
+        pass
+    local = top / "docs" / "WORKSPACE_PROTOCOL.md"
+    state = "present; read it" if local.is_file() else "absent"
+    return (f"Launch project `{top}`: `docs/WORKSPACE_PROTOCOL.md` is {state}. "
+            "Look for a local contract again only in a different target project.")
+
+
+def role_prompt(role: str, cwd: str | None = None) -> str:
+    return f"{role_instructions(role)}\n\n{local_contract_note(cwd)}"
+
+
 def is_session(args: list[str]) -> bool:
     """Sessions start with no args or a flag; probes and subcommands do not."""
     if not args:
@@ -165,7 +188,7 @@ def omp_args(args: list[str], role: str) -> list[str]:
     overlay = room_config_home() / OMP_OVERLAY
     if not overlay.is_file():
         raise SystemExit(f"omp room overlay is missing: {overlay}")
-    role_text = role_instructions(role)
+    role_text = role_prompt(role)
     args, prompts = take_flag(args, (APPEND_FLAG,))
     prompt = role_text
     if prompts:
@@ -180,11 +203,14 @@ def omp_args(args: list[str], role: str) -> list[str]:
 
 def claude_session_start(role: str) -> None:
     """Claude Code SessionStart hook: emit the role as session context."""
-    sys.stdin.read()
+    try:
+        cwd = json.loads(sys.stdin.read() or "{}").get("cwd")
+    except (json.JSONDecodeError, AttributeError):
+        cwd = None
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
-            "additionalContext": role_instructions(role),
+            "additionalContext": role_prompt(role, cwd if isinstance(cwd, str) else None),
         }
     }))
 
@@ -208,7 +234,7 @@ def main() -> None:
 
     if first == "pi":
         if not args or args[0] not in PROBE_ARGS | PI_SUBCOMMANDS:
-            role_text = role_instructions(role)
+            role_text = role_prompt(role)
             adapter = room_config_home() / "pi-mcp-adapter.mjs"
             if not adapter.is_file():
                 raise SystemExit(f"Pi room MCP adapter is missing: {adapter}")

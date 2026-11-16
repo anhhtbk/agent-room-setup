@@ -25,7 +25,9 @@ dependency constraints and record deferred obligations where they belong.
 
 Inspect the repository and current room state before assigning work. Dispatch
 briefs as the contract's Ownership and dispatch section defines. Do not edit
-the same moving scope while its Peer owns it.
+the same moving scope while its Peer owns it. Run Peers on the Peer provider's
+default model unless Human set another; escalate one Peer to a stronger model
+only for a difficulty you can name, and state that reason in its brief.
 
 When Human gives a spec with tickets (for example `spec.md` and
 `issues/NN-*.md`) or asks you to implement one, read and follow

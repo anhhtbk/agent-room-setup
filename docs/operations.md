@@ -37,14 +37,21 @@ their descendants (through `parentAgentId`); `room_watch_add` adopts an
 existing Lead. While the Supervisor is idle it receives one `<room-watch>`
 message batching:
 
-- Lead/Peer turn ends (completed, failed, canceled), after a 30 s debounce;
+- Lead turn ends (completed, failed, canceled) and failed Peer turns, after a
+  30 s debounce;
 - pending permissions or questions, and room stalls, immediately;
-- archives of watched agents;
+- archives of a Lead (a root the Supervisor created or adopted);
 - a checkpoint every 30 min while a Lead stays in one turn;
 - a stall when a watched agent is running and no watched agent has added a
   timeline entry for 8 min (once per episode). Updates inside one entry, such
   as a tool waiting on a background job or one long build, do not count, so a
   single long command also reports as a stall.
+
+Routine descendant events (a Peer's completed or canceled turn, a new or
+archived Peer) never wake the Supervisor by themselves; they ride along with
+the next wake. Over 04–16/11, 140 wakes led to 5 Lead messages, every one after
+a Lead turn end. Agent labels carry the full agent id so the Supervisor can
+pass it straight to `get_agent_activity`.
 
 Supervisors get `room_watch_add`, `room_watch_remove`, and `room_watch_list`.
 Only when those tools are missing does the Supervisor fall back to one

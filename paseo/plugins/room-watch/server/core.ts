@@ -7,7 +7,7 @@ export interface Thresholds {
   stallMinutes: number;
   /** A watched root (the Lead) in one turn this long → one checkpoint per interval. */
   checkpointMinutes: number;
-  /** Coalesce events this long before waking the Supervisor (permissions skip it). */
+  /** Coalesce events this long after the first active one before waking the Supervisor (permissions and stalls skip it). */
   debounceSeconds: number;
 }
 
@@ -51,6 +51,12 @@ export interface WatchEvent {
   detail: string;
   /** Agent label frozen at enqueue time, so archived agents keep their title. */
   who: string;
+  /**
+   * A routine descendant event (a Peer's turn completing or canceled, a new or
+   * archived Peer). It never wakes the Supervisor by itself and rides along
+   * with the next active event; it never needed intervention in practice.
+   */
+  passive: boolean;
 }
 
 export interface Probe {
@@ -244,8 +250,10 @@ export class RoomWatch {
   due(owner: string, now: number, t: Thresholds): boolean {
     const queue = this.queues.get(owner);
     if (!queue || queue.length === 0) return false;
-    if (queue.some((e) => e.kind === "permission" || e.kind === "stall")) return true;
-    return now - queue[0].at >= t.debounceSeconds * 1000;
+    const active = queue.filter((e) => !e.passive);
+    if (active.length === 0) return false;
+    if (active.some((e) => e.kind === "permission" || e.kind === "stall")) return true;
+    return now - active[0].at >= t.debounceSeconds * 1000;
   }
 
   /** Remove and render the owner's queue as one wake-up message. */
@@ -268,7 +276,7 @@ export class RoomWatch {
     const w = this.state.watched[agentId];
     const title = w?.title ? ` "${w.title}"` : "";
     const role = w ? w.role.charAt(0).toUpperCase() + w.role.slice(1) : "Agent";
-    return `${role}${title} (${agentId.slice(0, 8)})`;
+    return `${role}${title} (${agentId})`;
   }
 
   private progress(w: WatchedAgent, now: number): void {
@@ -276,9 +284,11 @@ export class RoomWatch {
     this.stallAlerted.delete(w.owner);
   }
 
-  private enqueue(owner: string, event: Omit<WatchEvent, "who">): void {
+  private enqueue(owner: string, event: Omit<WatchEvent, "who" | "passive">): void {
     const queue = this.queues.get(owner) ?? [];
-    queue.push({ ...event, who: this.label(event.agentId) });
+    const root = this.state.watched[event.agentId]?.root ?? false;
+    const passive = !root && (event.kind === "turn_completed" || event.kind === "turn_canceled" || event.kind === "created" || event.kind === "archived");
+    queue.push({ ...event, who: this.label(event.agentId), passive });
     this.queues.set(owner, queue);
   }
 }

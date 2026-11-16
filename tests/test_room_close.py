@@ -23,6 +23,10 @@ if args == ["workspace", "ls"]:
 elif args == ["project", "ls"]:
     print(json.dumps(state["projects"]))
 elif args[:2] == ["workspace", "archive"]:
+    for w in state["workspaces"]:
+        if w["workspaceId"] == args[2] and w.get("fakeRepo"):  # Paseo deletes its own worktrees on archive
+            import subprocess
+            subprocess.run(["git", "-C", w["fakeRepo"], "worktree", "remove", "--force", w["cwd"]], check=True)
     state["workspaces"] = [w for w in state["workspaces"] if w["workspaceId"] != args[2]]
     print(json.dumps({"workspaceId": args[2], "status": "archived"}))
 elif args[:2] == ["project", "delete"]:
@@ -36,7 +40,7 @@ json.dump(state, open(path, "w"))
 """
 
 
-class RoomCloseTest(unittest.TestCase):
+class Fixture(unittest.TestCase):
     def setUp(self):
         self.dir = pathlib.Path(tempfile.mkdtemp(prefix="roomclose-")).resolve()
         self.addCleanup(shutil.rmtree, self.dir, True)
@@ -92,6 +96,7 @@ class RoomCloseTest(unittest.TestCase):
     def branches(self) -> set[str]:
         return set(self.git(self.repo, "branch", "--format=%(refname:short)").split())
 
+class RoomCloseTest(Fixture):
     def test_unmerged_integration_refuses_every_change(self):
         ticket = self.add_worktree("01-a1")
         self.merge_into_integration("01-a1")
@@ -157,6 +162,58 @@ class RoomCloseTest(unittest.TestCase):
         self.assertIn("demo/02-a1", [line.split()[2] for line in result.stdout.splitlines() if "unmerged" in line])
         self.assertEqual(self.branches(), {"main", "keep/human"})
         self.assertFalse(dirty.exists() or self.run_dir.exists() or self.root.exists())
+
+
+class WorkspaceCloseTest(Fixture):
+    """`room-close.py workspace` on worktrees under Paseo's own root ($PASEO_HOME/worktrees)."""
+
+    def setUp(self):
+        super().setUp()
+        self.paseo_home = self.dir / "paseo-home"
+        self.env["PASEO_HOME"] = str(self.paseo_home)
+        self.feature = self.paseo_home / "worktrees" / "abc123" / "feature-x"
+        self.git(self.repo, "worktree", "add", "-q", "-b", "feature/x", str(self.feature), "main")
+        (self.feature / "x.txt").write_text("x")
+        self.git(self.feature, "add", ".")
+        self.git(self.feature, "commit", "-q", "-m", "x")
+        self.workspaces.append({"workspaceId": "wks_fx", "cwd": str(self.feature), "fakeRepo": str(self.repo)})
+
+    def close_workspace(self, *args) -> subprocess.CompletedProcess:
+        self.state.write_text(json.dumps({"workspaces": self.workspaces, "projects": self.projects}))
+        return subprocess.run([sys.executable, CLOSE, "workspace", *map(str, args)],
+                              capture_output=True, text=True, timeout=60, env=self.env)
+
+    def test_merged_paseo_worktree_is_removed_with_its_branch(self):
+        self.git(self.repo, "branch", "staging", "feature/x")
+        dry = self.close_workspace("--id", "wks_fx", "--into", "staging")
+        self.assertEqual(dry.returncode, 0, dry.stdout)
+        self.assertIn("WOULD-REMOVE workspace wks_fx", dry.stdout)
+        self.assertTrue(self.feature.is_dir())
+        self.assertIn("feature/x", self.branches())
+
+        result = self.close_workspace("--id", "wks_fx", "--into", "staging", "--apply")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertFalse(self.feature.exists())
+        self.assertEqual(self.branches(), {"main", "keep/human", "demo/integration", "staging"})
+        self.assertNotIn("wks_fx", [w["workspaceId"] for w in self.paseo_state()["workspaces"]])
+
+    def test_unmerged_dirty_or_foreign_workspace_is_kept(self):
+        result = self.close_workspace("--id", "wks_fx", "--into", "main", "--apply")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("is not merged into main", result.stdout)
+
+        self.git(self.repo, "branch", "staging", "feature/x")
+        (self.feature / "wip.txt").write_text("unsaved")
+        result = self.close_workspace("--id", "wks_fx", "--into", "staging", "--apply")
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("not clean", result.stdout)
+
+        # The integration worktree is a Room run's, outside Paseo's root: `close` owns it.
+        result = self.close_workspace("--id", "wks_int", "--into", "demo/integration", "--apply")
+        self.assertIn("use close", result.stdout)
+        self.assertTrue(self.feature.is_dir() and self.integration.is_dir())
+        self.assertIn("feature/x", self.branches())
+        self.assertEqual(len(self.paseo_state()["workspaces"]), 3)
 
 
 if __name__ == "__main__":

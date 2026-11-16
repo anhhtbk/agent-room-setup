@@ -56,7 +56,12 @@ evidence, then continue ready work without creating another approval gate.
   Paseo projects registered for them, Peer agents, and run state. Human's own
   checkout, Paseo project, workspaces, and branches stay. Anything that is not
   proven merged and clean stays and goes to Human. `IMPLEMENT_SPEC.md` (Close)
-  gives the tool for its layout.
+  gives the tool for its layout. A worktree workspace under `~/.paseo/worktrees`
+  is removed by the agent that created it, from outside it (archiving a
+  workspace archives the agents inside), once its branch is merged or pushed
+  where Human authorized:
+  `python3 ~/.config/codex-room/tools/room-close.py workspace --id <id> --into <ref>`,
+  dry run, then `--apply`; report its `KEEP` lines to Human.
 
 ## Ready inputs and continuity
 

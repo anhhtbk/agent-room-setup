@@ -5,6 +5,7 @@ Usage:
   room-close.py scan  --repo R [--repo R]...
   room-close.py close --slug S --repo R [--repo R]... [--into B]... [--root W]...
                       [--run RUN] [--drop-unmerged] [--apply]
+  room-close.py workspace --id WKS [--id WKS]... --into REF [--apply]
 
 A Room run with slug S creates, per repository R (IMPLEMENT_SPEC.md): branches
 `S/integration` and `S/<ticket>-a<K>`, linked worktrees `W/<R name>-S-<suffix>`
@@ -47,6 +48,20 @@ close   Dry run unless --apply. `--into` is the working branch per repository
         left partial, it is a Room run directory (cache, procs or baseline.json
         present, not a symlink, outside every R) and no process registered
         under RUN/procs is live (see room-gc.py).
+workspace
+        For a worktree Paseo created itself (create_workspace with worktree
+        isolation, under ~/.paseo/worktrees), which `close` never touches.
+        Dry run unless --apply. Per WKS: the workspace must be active, its cwd
+        a linked worktree under ~/.paseo/worktrees, unlocked, `git status`
+        empty (tracked, staged, untracked), no merge/rebase/... in progress,
+        and its HEAD an ancestor of REF in the main repository (any ref:
+        `staging`, `origin/staging`; fetch first, this tool never fetches).
+        Then it archives the workspace through `paseo workspace archive`,
+        which archives its agents and has Paseo remove the directory, deletes
+        any Paseo project at or below the path, and deletes the local branch
+        the worktree had checked out when its tip is an ancestor of REF and no
+        other worktree has it checked out (prints the SHA to bring it back).
+        Anything that fails a check is KEEP with the reason.
 
 Output: one line per item, verb first (WOULD-REMOVE, REMOVED, KEEP, REFUSE,
 PARTIAL, NOTE), then one SUMMARY line.
@@ -54,8 +69,9 @@ Exit codes: 0 done (or dry run without KEEP/REFUSE); 1 something kept or
 refused; 2 usage error; 3 a removal failed midway (PARTIAL).
 
 Limits: Paseo state is read and changed only through the `paseo` CLI of the
-local daemon. Workspaces under Paseo's own worktree root (~/.paseo/worktrees)
-are never archived here: archiving them deletes the directory unchecked.
+local daemon. `close` never archives workspaces under Paseo's own worktree
+root (~/.paseo/worktrees): archiving them deletes the directory with
+`git worktree remove --force`, so only `workspace` does it, after its checks.
 """
 import argparse
 import importlib.util
@@ -66,7 +82,7 @@ import shutil
 import subprocess
 import sys
 
-PASEO_ROOT = os.path.realpath(os.path.expanduser("~/.paseo/worktrees"))
+PASEO_ROOT = os.path.realpath(os.path.join(os.path.expanduser(os.environ.get("PASEO_HOME", "~/.paseo")), "worktrees"))
 IN_PROGRESS = ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "BISECT_LOG", "rebase-merge", "rebase-apply")
 
 
@@ -326,6 +342,99 @@ class Closer:
         return 3 if self.partial else 1 if self.kept else 0
 
 
+class WorkspaceCloser(Closer):
+    """Remove Paseo-owned worktree workspaces whose work is merged into --into."""
+
+    def reason(self, path: str, into: str) -> tuple[str | None, dict]:
+        info: dict = {}
+        if not under(path, PASEO_ROOT):
+            return f"not under {PASEO_ROOT}; use close", info
+        if not os.path.isdir(path):
+            return "directory missing", info
+        git_dir = real(os.path.join(path, git(path, "rev-parse", "--git-dir").stdout.strip()))
+        common = real(os.path.join(path, git(path, "rev-parse", "--git-common-dir").stdout.strip()))
+        if git_dir == common:
+            return "not a linked worktree", info
+        repo = os.path.dirname(common) if os.path.basename(common) == ".git" else common
+        info["repo"] = repo
+        item = next((w for w in worktrees(repo) if w["path"] == path), None)
+        if item is None:
+            return f"not listed by git worktree list in {repo}", info
+        info["branch"] = item.get("branch", "").removeprefix("refs/heads/")
+        info["head"] = item["HEAD"]
+        if "locked" in item:
+            return "locked", info
+        target = git(repo, "rev-parse", "--verify", "--quiet", f"{into}^{{commit}}", check=False).stdout.strip()
+        if not target:
+            return f"{into} does not resolve to a commit in {repo}", info
+        info["target"] = target
+        if not is_ancestor(repo, item["HEAD"], target):
+            return f"{info['branch'] or 'HEAD'} {item['HEAD'][:12]} is not merged into {into}", info
+        status = git(path, "status", "--porcelain", "--untracked-files=all", "--ignore-submodules=none").stdout
+        if status.strip():
+            return f"not clean: {status.splitlines()[0].strip()}", info
+        for marker in IN_PROGRESS:
+            if os.path.exists(git(path, "rev-parse", "--git-path", marker).stdout.strip()):
+                return f"{marker} in progress", info
+        return None, info
+
+    def close_workspace(self, workspace_id: str) -> None:
+        into = self.args.into
+        workspace = next((w for w in self.paseo.workspaces if w["workspaceId"] == workspace_id), None)
+        if workspace is None:
+            return self.say("KEEP", f"workspace {workspace_id}: not an active Paseo workspace")
+        path = real(workspace["cwd"])
+        why, info = self.reason(path, into)
+        if why:
+            return self.say("KEEP", f"workspace {workspace_id} {path}: {why}")
+        repo, branch, head = info["repo"], info["branch"], info["head"]
+        self.forgotten.add(workspace_id)
+        self.say("REMOVE", f"workspace {workspace_id} {path} {branch or 'detached'} {head[:12]} (Paseo removes the worktree)")
+        if self.apply:
+            self.paseo.run("workspace", "archive", workspace_id)
+            if os.path.exists(path):
+                self.partial = True
+                print(f"PARTIAL worktree {path}: workspace archived but Paseo left the directory (another workspace still uses it?)")
+                return
+        for project in self.paseo.projects_at(path):
+            if project["projectId"] not in self.forgotten:
+                self.forgotten.add(project["projectId"])
+                self.say("REMOVE", f"project {project['projectId']} {project['path']}")
+                if self.apply:
+                    self.paseo.run("project", "delete", project["projectId"])
+        tip = branches(repo).get(branch) if branch else None
+        if tip is None:
+            return
+        elsewhere = [w["path"] for w in worktrees(repo) if w["path"] != path
+                     and w.get("branch", "").removeprefix("refs/heads/") == branch]
+        if git(repo, "branch", "--show-current").stdout.strip() == branch:
+            elsewhere.append(repo)
+        if elsewhere:
+            return self.say("KEEP", f"branch {branch} {tip[:12]}: checked out in {elsewhere[0]}")
+        if not is_ancestor(repo, tip, info["target"]):
+            return self.say("KEEP", f"branch {branch} {tip[:12]}: not merged into {into}")
+        self.say("REMOVE", f"branch {branch} {tip} merged; bring back: git -C {repo} branch {branch} {tip}")
+        if self.apply:
+            result = git(repo, "update-ref", "-d", f"refs/heads/{branch}", tip, check=False)
+            if result.returncode != 0:
+                self.partial = True
+                print(f"PARTIAL branch {branch}: {result.stderr.strip()}")
+
+    def close(self) -> int:
+        self.paseo.load()
+        try:
+            for workspace_id in dict.fromkeys(self.args.id):
+                self.close_workspace(workspace_id)
+        except Refuse as error:
+            if not self.apply:
+                raise
+            self.partial = True
+            print(f"PARTIAL {error}: the item on the line above did not complete; nothing after it ran")
+        verb = "removed" if self.apply else "would-remove"
+        print(f"SUMMARY {verb}={self.removed} kept={self.kept} partial={'yes' if self.partial else 'no'}")
+        return 3 if self.partial else 1 if self.kept else 0
+
+
 def scan(args: argparse.Namespace) -> int:
     for repo in map(real, args.repo):
         into = git(repo, "branch", "--show-current").stdout.strip() or "HEAD"
@@ -358,11 +467,17 @@ def main() -> int:
     sub.add_argument("--run")
     sub.add_argument("--drop-unmerged", action="store_true")
     sub.add_argument("--apply", action="store_true")
+    sub = commands.add_parser("workspace")
+    sub.add_argument("--id", action="append", required=True)
+    sub.add_argument("--into", required=True)
+    sub.add_argument("--apply", action="store_true")
     args = parser.parse_args()
     if args.action == "close" and (not args.slug or "/" in args.slug or args.slug in (".", "..")):
         parser.error("--slug must be one path segment")
     try:
-        return scan(args) if args.action == "scan" else Closer(args).close()
+        if args.action == "scan":
+            return scan(args)
+        return (WorkspaceCloser if args.action == "workspace" else Closer)(args).close()
     except Refuse as error:
         print(f"REFUSE {error}")
         print("SUMMARY nothing changed")

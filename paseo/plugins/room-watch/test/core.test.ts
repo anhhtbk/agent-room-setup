@@ -44,12 +44,44 @@ test("a new agent is probed even when its first turn started before it was watch
 
 test("turn ends wait for the debounce; permissions are due at once", () => {
   const w = room();
-  w.onTurnEnded("peer", { kind: "completed" }, 0);
+  w.onTurnEnded("lead", { kind: "completed" }, 0);
   assert.equal(w.due("sup", 29_000, T), false);
   assert.equal(w.due("sup", 30_000, T), true);
   w.drain("sup");
   w.onPermission("peer", "tool: Bash", 0);
   assert.equal(w.due("sup", 0, T), true);
+});
+
+test("routine Peer events never wake the Supervisor alone and ride along with the next active one", () => {
+  const w = room();
+  w.onCreated({ id: "peer2", parentAgentId: "lead", title: "Peer C", provider: "omp-peer" }, false, 0);
+  w.onTurnEnded("peer", { kind: "completed" }, 0);
+  w.onTurnEnded("peer2", { kind: "canceled", reason: "stop" }, 0);
+  w.onArchived("peer2", 0);
+  assert.equal(w.due("sup", 60 * MIN, T), false);
+  w.onTurnEnded("lead", { kind: "completed" }, 60 * MIN);
+  assert.equal(w.due("sup", 60 * MIN + 29_000, T), false);
+  assert.equal(w.due("sup", 60 * MIN + 30_000, T), true);
+  const message = w.drain("sup") ?? "";
+  assert.match(message, /Peer "Peer B" \(peer\): turn completed/);
+  assert.match(message, /Peer "Peer C" \(peer2\): archived/);
+  assert.match(message, /Lead "Lead A" \(lead\): turn completed/);
+});
+
+test("a failed Peer turn and an archived Lead still wake the Supervisor", () => {
+  const w = room();
+  w.onTurnEnded("peer", { kind: "failed", error: { message: "boom" } }, 0);
+  assert.equal(w.due("sup", 30_000, T), true);
+  w.drain("sup");
+  w.onArchived("lead", 0);
+  assert.equal(w.due("sup", 30_000, T), true);
+});
+
+test("labels carry the full agent id, usable with get_agent_activity", () => {
+  const w = new RoomWatch(emptyState());
+  const id = "85ef70b5-9974-47f3-9cd7-67dd579c746e";
+  w.onCreated({ id, parentAgentId: "sup", title: "Lead A", provider: "omp-lead" }, true, 0);
+  assert.equal(w.label(id), `Lead "Lead A" (${id})`);
 });
 
 test("one digest carries every queued event and empties the queue", () => {
