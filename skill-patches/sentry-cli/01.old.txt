@@ -1,0 +1,3 @@
+- **The CLI auto-detects org/project — don't discover it yourself** — most commands work without explicit targets by checking `.sentryclirc` config files, scanning for DSNs in `.env` files and source code, and matching directory names. Do **not** run `sentry org list` and then `sentry project list` to figure out which project this checkout belongs to — that manual fan-out just replicates the detection the CLI already runs on every command. Only specify `<org>/<project>` when the CLI reports it can't detect the target or detects the wrong one.
+
+### Design Principles

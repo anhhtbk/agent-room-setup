@@ -24,6 +24,17 @@ renders it to the path without `.template`. The public installer creates the
 Paseo CLI symlink after the checkout is available. `scripts/install-paseo`
 is a lower-level maintenance helper used by that lifecycle.
 
+## Patched, not owned
+
+```text
+~/.agents/skills/<skill>/SKILL.md
+~/.claude/skills/<skill>/SKILL.md
+```
+
+Only for skills named under `skill-patches/`, only when the operator runs
+`scripts/patch-skills --apply`. The skills stay installed and updated by their
+own tool (`npx skills`); the repository tracks text replacements, not copies.
+
 ## Generated files
 
 ```text

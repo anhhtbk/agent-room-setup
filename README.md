@@ -292,7 +292,19 @@ official sources and adapter details.
 # Optional sanitized runtime summaries for local comparison
 ./scripts/export-runtime-snapshots
 
+# Optional: apply the tracked prompt fixes to installed third-party skills
+./scripts/patch-skills            # dry-run
+./scripts/patch-skills --apply
 ```
+
+`scripts/patch-skills` is an opt-in exception to the ownership boundary above:
+`./install` never runs it. It edits only the `SKILL.md` files of skills named
+under [`skill-patches/`](skill-patches/) that the operator has already installed
+in `~/.agents/skills` or `~/.claude/skills`, backs them up to
+`~/.codex-room-backups/`, and reports a skill `STALE` (untouched, exit 1) when
+its upstream text no longer matches. Re-run it after `npx skills update`.
+Paseo's bundled skills are not patchable this way: the daemon re-syncs them
+from the pinned release on startup.
 
 The lower-level scripts are maintenance interfaces used by the public
 lifecycle and are not alternate fresh-install commands. See

@@ -1,0 +1,1 @@
+If nothing fits, say so, offer to do the task directly, and mention `npx skills init <name>` for creating their own skill.

@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""Apply the tracked text patches in skill-patches/ to the operator's installed agent skills.
+
+The installer does not own ~/.claude or ~/.agents, so this is a separate,
+operator-run step. Each patch is a pair NN.old.txt / NN.new.txt under
+skill-patches/<skill>/: the exact upstream text and its replacement. A patch
+applies only when its old text occurs exactly once; a skill whose upstream
+text changed is reported STALE and left untouched, so a skill update never
+gets a half-applied edit.
+"""
+from __future__ import annotations
+
+import argparse
+import os
+import shutil
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+PATCH_ROOT = REPO_ROOT / "skill-patches"
+# Where `npx skills` and Claude Code keep user-level skills; a skill may be a
+# symlink from one root into the other, so candidates are deduplicated by realpath.
+SKILL_ROOTS = (".agents/skills", ".claude/skills")
+
+
+def load_patches(skill_dir: Path) -> list[tuple[str, str, str]]:
+    patches = []
+    for old_file in sorted(skill_dir.glob("*.old.txt")):
+        name = old_file.name.removesuffix(".old.txt")
+        new_file = skill_dir / f"{name}.new.txt"
+        if not new_file.is_file():
+            sys.exit(f"patch-skills: missing {new_file.relative_to(REPO_ROOT)}")
+        patches.append((name, old_file.read_text(), new_file.read_text()))
+    return patches
+
+
+def installed_copies(home: Path, skill: str) -> list[Path]:
+    seen: dict[Path, Path] = {}
+    for root in SKILL_ROOTS:
+        candidate = home / root / skill / "SKILL.md"
+        if candidate.is_file():
+            seen.setdefault(candidate.resolve(), candidate)
+    return list(seen)
+
+
+def patch_text(text: str, patches: list[tuple[str, str, str]]) -> tuple[str | None, list[str], list[str]]:
+    """Return (patched text or None if stale, applied names, stale names)."""
+    applied, stale = [], []
+    for name, old, new in patches:
+        count = text.count(old)
+        if count == 1:
+            text = text.replace(old, new, 1)
+            applied.append(name)
+        elif count == 0 and new.strip() and new in text:
+            continue  # already applied
+        else:
+            stale.append(name)
+    return (None if stale else text), applied, stale
+
+
+def write_atomic(path: Path, text: str) -> None:
+    mode = path.stat().st_mode & 0o7777
+    fd, temporary = tempfile.mkstemp(dir=path.parent, prefix=".patch-skills.")
+    try:
+        with os.fdopen(fd, "w") as handle:
+            handle.write(text)
+        os.chmod(temporary, mode)
+        os.replace(temporary, path)
+    except BaseException:
+        Path(temporary).unlink(missing_ok=True)
+        raise
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--apply", action="store_true", help="write changes (backups go to ~/.codex-room-backups)")
+    mode.add_argument("--dry-run", action="store_true", help="report only (default)")
+    args = parser.parse_args()
+
+    home = Path(os.environ.get("HOME", Path.home()))
+    backup_root = home / ".codex-room-backups" / time.strftime("patch-skills-%Y%m%dT%H%M%SZ", time.gmtime())
+    changed = stale_total = 0
+
+    for skill_dir in sorted(p for p in PATCH_ROOT.iterdir() if p.is_dir()):
+        skill = skill_dir.name
+        patches = load_patches(skill_dir)
+        copies = installed_copies(home, skill)
+        if not copies:
+            print(f"SKIP       {skill} (not installed)")
+            continue
+        for path in copies:
+            original = path.read_text()
+            patched, applied, stale = patch_text(original, patches)
+            label = f"{skill} ({path})"
+            if patched is None:
+                stale_total += 1
+                print(f"STALE      {label}: upstream text changed for patch(es) {', '.join(stale)}; left untouched")
+            elif not applied:
+                print(f"UNCHANGED  {label}")
+            elif not args.apply:
+                changed += 1
+                print(f"PATCH      {label}: {', '.join(applied)}")
+            else:
+                changed += 1
+                try:
+                    backup = backup_root / path.relative_to(home.resolve())
+                except ValueError:
+                    backup = backup_root / skill / "SKILL.md"
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, backup)
+                write_atomic(path, patched)
+                print(f"PATCHED    {label}: {', '.join(applied)}")
+
+    if args.apply:
+        if backup_root.exists():
+            print(f"BACKUP     {backup_root}")
+        print(f"PATCH_COMPLETE: {changed} skill file(s) changed")
+    else:
+        print(f"DRY_RUN: {changed} skill file(s) would change. Run scripts/patch-skills --apply to patch.")
+    return 1 if stale_total else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
