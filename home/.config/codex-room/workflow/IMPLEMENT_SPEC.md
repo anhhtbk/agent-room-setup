@@ -39,7 +39,8 @@ protocol win; everything else follows the skill. Any agent loads a named skill
 
 Create each Peer with the Paseo agent tool in the adopted workspace of its
 first worktree: the `*-peer` provider of Lead's runtime unless Human names
-another, background, notify on finish. Peers have no subagents of their own.
+another, `background: false` (visible in Paseo), notify on finish. Peers have
+no subagents of their own.
 At most three writable Peers run at once. Every Peer response closes with a
 Lead disposition. Lead writes no ticket code.
 
