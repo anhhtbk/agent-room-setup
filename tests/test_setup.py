@@ -13,6 +13,11 @@ import time
 import unittest
 import re
 
+# A git hook (e.g. pre-commit running this suite) exports GIT_DIR, GIT_INDEX_FILE and friends;
+# fixture `git init`/`git -C` calls would otherwise write into this checkout (e.g. core.worktree).
+for _key in [key for key in os.environ if key.startswith("GIT_")]:
+    del os.environ[_key]
+
 
 ROOT = Path(__file__).resolve().parents[1]
 HOME_MIRROR = ROOT / "home"
