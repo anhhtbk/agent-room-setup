@@ -231,6 +231,9 @@ Codex-only overlay keys do not apply. Paseo lists only Claude Fable 5.2, Opus
 and any listed model can be chosen per agent. `claude-*` and `omp-*` roles are
 enabled; GPT models are disabled (codex and Pi providers off); see
 [profiles and overlays](docs/profiles-and-overlays.md).
+omp's own background jobs (auto-thinking, job captions) run on its `smol`
+model role; `omp-room.config.yml` sets that to Sonnet 5.5 for every Room role
+and leaves the operator's other `modelRoles` as they are.
 `agent-room claude lead` also works from a
 terminal for an interactive role session. See
 [docs/architecture.md](docs/architecture.md) for why no per-role home is created.

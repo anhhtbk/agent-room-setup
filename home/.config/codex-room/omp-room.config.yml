@@ -3,3 +3,8 @@
 # so delegation happens only through Paseo roles.
 task:
   maxRecursionDepth: 0
+# omp runs background jobs (auto-thinking, job captions and widgets) on the
+# `smol` role; omp merges this over the operator's other modelRoles, so Room
+# sessions keep those jobs on Sonnet whatever the operator's `smol` is.
+modelRoles:
+  smol: anthropic/claude-sonnet-5-5

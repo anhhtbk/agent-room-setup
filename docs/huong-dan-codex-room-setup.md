@@ -140,7 +140,9 @@ process:
   (kể cả sau resume/compact) và chặn `Agent`, `Workflow` bằng
   `--disallowedTools`.
 - omp: nạp `~/.config/codex-room/omp-room.config.yml` bằng `--config`
-  (`task.maxRecursionDepth: 0` gỡ tool `task`) và gộp chỉ dẫn role với
+  (`task.maxRecursionDepth: 0` gỡ tool `task`; `modelRoles.smol` cho các job
+  nền của omp như auto-thinking, job caption chạy Sonnet 5.5, các role model
+  khác giữ theo `~/.omp/agent/config.yml`) và gộp chỉ dẫn role với
   `--append-system-prompt` mà Paseo truyền vào.
 - Pi (pi.dev, không phải omp): dùng `pi-supervisor`, `pi-lead`, `pi-peer`
   qua adapter Pi/RPC của Paseo. Thêm role bằng một `--append-system-prompt`
