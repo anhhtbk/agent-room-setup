@@ -82,7 +82,7 @@ Pi does not expose an approval/sandbox mode equivalent to Codex.
 | --- | --- | --- |
 | `~/.codex` | Operator/Codex | Auth, global config, skills, plugins, sessions |
 | `~/.config/codex-room` | This repository | Role overlays, omp overlay, Pi MCP compatibility extension, and the workspace protocol reference |
-| `~/.claude`, `~/.omp`, `~/.pi` | Operator and their runtimes | Auth, settings, skills, sessions (never written by this repository's setup) |
+| `~/.claude`, `~/.omp`, `~/.pi` | Operator and their runtimes | Auth, settings, skills, sessions (the setup writes only the shared skills of `scripts/install-skills`) |
 | `~/.codex-runtime` | `codex-room-sync` | Generated configs plus role-local sessions and databases |
 | `~/.paseo` | Paseo | Provider config, agents, projects, worktrees, logs and identity |
 | Paseo stable release checkout | Git | Source code for CLI, daemon and Desktop |

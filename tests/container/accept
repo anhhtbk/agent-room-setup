@@ -166,6 +166,8 @@ export AGENT_LAUNCH_LOG="$acceptance_root/agent-launches.log"
 export CODEX_ROOM_MODEL_CATALOG="$fixture"
 export PASEO_SOURCE_URL=https://github.com/getpaseo/paseo.git
 export CODEX_ROOM_VERIFY_BIN="$fake_bin/verify-installed"
+# Shared skills install over the network; scripts/install-skills has its own tests.
+export CODEX_ROOM_SKILLS_BIN=true
 export npm_config_audit=false
 export npm_config_fund=false
 export npm_config_update_notifier=false

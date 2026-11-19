@@ -824,6 +824,9 @@ class PublicInstallTransactionTests(unittest.TestCase):
             "PASEO_SOURCE_URL": str(fixture / "paseo.git"),
             "PASEO_RELEASES_API": str(fixture / "releases.json"),
             "CODEX_ROOM_VERIFY_BIN": str(verifier),
+            # Shared skills install over the network; scripts/install-skills
+            # has its own tests.
+            "CODEX_ROOM_SKILLS_BIN": "true",
             "VERIFY_LOG": str(self.root / "verify.log"),
         }
 

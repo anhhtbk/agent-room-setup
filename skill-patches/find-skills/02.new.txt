@@ -1,5 +1,0 @@
-Look for an existing skill that fits the user's domain and task. The [skills.sh leaderboard](https://skills.sh/) ranks skills by installs; `npx skills find [query] [--owner <owner>]` searches by keyword.
-
-Recommend a skill only after checking its quality: install count (prefer 1K+, be cautious under 100), source reputation (official sources such as `vercel-labs`, `anthropics`, `microsoft` are more trustworthy), and the source repository's stars (treat under 100 with skepticism).
-
-For each recommendation give its name and purpose, install count and source, the install command, and its skills.sh link. If the user wants it installed, run `npx skills add <owner/repo@skill> -g -y` (`-g` installs at user level, `-y` skips confirmation prompts).

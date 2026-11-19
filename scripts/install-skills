@@ -1,0 +1,361 @@
+#!/usr/bin/env python3
+"""Install the operator's shared agent skills and retire the copies they replace.
+
+One copy per skill lives in ~/.agents/skills (read by Codex and omp), linked
+into ~/.claude/skills for Claude Code, installed by `npx skills` so
+`npx skills update` keeps working. SOURCES is the single list of what is
+installed; RETIRED_* is what this setup replaced.
+
+  scripts/install-skills            # plan from local state only (no network)
+  scripts/install-skills --apply    # install missing skills, then retire old copies
+  scripts/install-skills --apply --update   # also reinstall skills already present
+  scripts/install-skills --verify   # check the installed state
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class Source:
+    label: str
+    spec: str  # argument to `npx skills add`
+    lock_source: str  # "source" recorded in ~/.agents/.skill-lock.json
+    repo: str  # git URL for enumeration
+    sparse: tuple[str, ...] = ()  # repository paths holding the skills
+    skills: tuple[str, ...] = ()  # fixed names; empty means enumerate `sparse`
+    exclude: tuple[str, ...] = ()
+    required: tuple[str, ...] = field(default=())  # Room depends on these
+
+
+SOURCES = (
+    Source(
+        label="mattpocock",
+        spec="mattpocock/skills",
+        lock_source="mattpocock/skills",
+        repo="https://github.com/mattpocock/skills.git",
+        sparse=("skills/engineering", "skills/productivity"),
+        required=("tdd", "code-review"),
+    ),
+    Source(
+        # The claude-code harness tree is pstack adapted for Claude Code
+        # names; omp used the same tree before this installer.
+        label="pstack",
+        spec="https://github.com/cursor/plugins/tree/main/harness/pstack/claude-code",
+        lock_source="cursor/plugins",
+        repo="https://github.com/cursor/plugins.git",
+        sparse=("harness/pstack/claude-code",),
+        # mattpocock's tdd and teach own these names; the Room uses its tdd.
+        exclude=("tdd", "teach"),
+    ),
+    Source(
+        label="grill-with-ui",
+        spec="jasonku09/grill-with-ui",
+        lock_source="jasonku09/grill-with-ui",
+        repo="https://github.com/jasonku09/grill-with-ui.git",
+        skills=("grill-with-ui",),
+    ),
+    Source(
+        label="excalidraw",
+        spec="nv-minh/drawing-excalidraw-figures",
+        lock_source="nv-minh/drawing-excalidraw-figures",
+        repo="https://github.com/nv-minh/drawing-excalidraw-figures.git",
+        skills=("drawing-excalidraw-figures",),
+    ),
+)
+
+AGENTS = ("claude-code", "codex")
+RETIRED_SKILLS = ("find-skills",)
+RETIRED_CLAUDE_PLUGINS = ("mattpocock-skills@claude-plugins-official", "pstack@cursor-plugins")
+RETIRED_OMP_PLUGINS = ("pstack@cursor-plugins",)
+PSTACK_ADAPTER = "harness/pstack/claude-code/docs/harness/claude-code.md"
+
+HOME = Path(os.environ.get("HOME", str(Path.home()))).expanduser()
+AGENTS_SKILLS = HOME / ".agents" / "skills"
+CLAUDE_SKILLS = HOME / ".claude" / "skills"
+LOCK = HOME / ".agents" / ".skill-lock.json"
+OMP_AGENT = HOME / ".omp" / "agent"
+OMP_VENDOR_CLONE = HOME / ".omp" / "vendor" / "cursor-plugins"
+OMP_VENDOR_SYNC = HOME / ".omp" / "vendor" / "pstack-sync.sh"
+NPX = os.environ.get("NPX_BIN", "npx")
+CLAUDE = os.environ.get("CLAUDE_BIN", "claude")
+OMP = os.environ.get("OMP_BIN", "omp")
+
+
+def out(message: str) -> None:
+    print(message, flush=True)
+
+
+def run(command: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
+    completed = subprocess.run(command, text=True, capture_output=True, stdin=subprocess.DEVNULL)
+    if check and completed.returncode:
+        detail = (completed.stderr or completed.stdout).strip().splitlines()[-5:]
+        raise SystemExit(f"FAIL  {' '.join(command[:4])}: exit {completed.returncode}\n  " + "\n  ".join(detail))
+    return completed
+
+
+def lock_entries() -> dict[str, dict]:
+    try:
+        return json.loads(LOCK.read_text()).get("skills", {})
+    except (OSError, ValueError):
+        return {}
+
+
+def owned(name: str, source: Source, lock: dict[str, dict]) -> bool:
+    entry = lock.get(name)
+    return bool(entry) and entry.get("source") == source.lock_source and (AGENTS_SKILLS / name / "SKILL.md").is_file()
+
+
+def foreign(name: str, source: Source, lock: dict[str, dict]) -> bool:
+    """A path this source did not install (a dev symlink, another source)."""
+    path = AGENTS_SKILLS / name
+    return (path.exists() or path.is_symlink()) and not owned(name, source, lock)
+
+
+def skill_name(skill_md: Path) -> str:
+    text = skill_md.read_text(errors="ignore")
+    match = re.search(r"^---\s*\n(.*?)\n---", text, re.S)
+    if match:
+        for line in match.group(1).splitlines():
+            if line.startswith("name:"):
+                return line.split(":", 1)[1].strip().strip("\"'")
+    return skill_md.parent.name
+
+
+def clone(source: Source, destination: Path) -> Path:
+    target = destination / source.label
+    run(["git", "clone", "--quiet", "--depth", "1", "--filter=blob:none", "--sparse", source.repo, str(target)])
+    run(["git", "-C", str(target), "sparse-checkout", "set", *source.sparse])
+    return target
+
+
+def wanted(source: Source, checkout: Path | None) -> list[str]:
+    if source.skills:
+        return list(source.skills)
+    assert checkout is not None
+    names = {
+        skill_name(skill_md)
+        for root in source.sparse
+        for skill_md in (checkout / root).rglob("SKILL.md")
+    }
+    return sorted(names - set(source.exclude))
+
+
+# ---------------------------------------------------------------- retire
+
+def claude_plugins() -> list[str]:
+    if not shutil.which(CLAUDE):
+        return []
+    completed = run([CLAUDE, "plugin", "list", "--json"], check=False)
+    try:
+        return [plugin["id"] for plugin in json.loads(completed.stdout)]
+    except (ValueError, TypeError, KeyError):
+        return []
+
+
+def omp_plugins() -> list[str]:
+    if not shutil.which(OMP):
+        return []
+    completed = run([OMP, "plugin", "list", "--json"], check=False)
+    return [name for name in RETIRED_OMP_PLUGINS if f'"{name}"' in completed.stdout]
+
+
+def omp_vendor_links() -> list[Path]:
+    skills = OMP_AGENT / "skills"
+    if not skills.is_dir():
+        return []
+    prefix = str(OMP_VENDOR_CLONE) + os.sep
+    return sorted(
+        link for link in skills.iterdir() if link.is_symlink() and os.readlink(link).startswith(prefix)
+    )
+
+
+def retire_plan() -> list[tuple[str, str]]:
+    plan: list[tuple[str, str]] = []
+    lock = lock_entries()
+    for name in RETIRED_SKILLS:
+        if name in lock or (AGENTS_SKILLS / name).exists():
+            plan.append(("skill", name))
+    installed = claude_plugins()
+    plan += [("claude-plugin", plugin) for plugin in RETIRED_CLAUDE_PLUGINS if plugin in installed]
+    plan += [("omp-plugin", plugin) for plugin in omp_plugins()]
+    plan += [("omp-link", str(link)) for link in omp_vendor_links()]
+    if OMP_VENDOR_CLONE.exists():
+        plan.append(("omp-vendor", str(OMP_VENDOR_CLONE)))
+    if OMP_VENDOR_SYNC.exists():
+        plan.append(("omp-vendor", str(OMP_VENDOR_SYNC)))
+    return plan
+
+
+def retire(plan: list[tuple[str, str]]) -> None:
+    backup = HOME / ".codex-room-backups" / f"skills-{time.strftime('%Y%m%dT%H%M%S')}"
+    for kind, target in plan:
+        if kind == "skill":
+            run([NPX, "-y", "skills", "remove", "-g", "-y", target])
+        elif kind == "claude-plugin":
+            run([CLAUDE, "plugin", "uninstall", target])
+        elif kind == "omp-plugin":
+            run([OMP, "plugin", "uninstall", target])
+        elif kind == "omp-link":
+            Path(target).unlink()
+            continue
+        elif kind == "omp-vendor":
+            path = Path(target)
+            if path.is_dir() and (path / ".git").exists():
+                shutil.rmtree(path)  # a clone `git clone` recreates
+            else:
+                backup.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(path), backup / path.name)
+                target += f" (moved to {backup})"
+        out(f"RETIRED   {kind:13} {target}")
+    links = sum(1 for kind, _ in plan if kind == "omp-link")
+    if links:
+        out(f"RETIRED   {'omp-link':13} {links} links into {OMP_VENDOR_CLONE}")
+
+
+# ---------------------------------------------------------------- extras
+
+def write_if_changed(path: Path, data: bytes) -> bool:
+    if path.is_file() and path.read_bytes() == data:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return True
+
+
+def install_pstack_adapter(checkout: Path) -> None:
+    # Harness skills link ../../docs/harness/claude-code.md, resolved from
+    # both skill roots.
+    data = (checkout / PSTACK_ADAPTER).read_bytes()
+    for root in (HOME / ".agents", HOME / ".claude"):
+        path = root / "docs" / "harness" / "claude-code.md"
+        if write_if_changed(path, data):
+            out(f"WROTE     {path}")
+
+
+def mirror_pstack_rule() -> None:
+    """omp never loads Claude or Cursor rule roots; mirror /setup-pstack's rule."""
+    if not OMP_AGENT.is_dir():
+        return
+    cursor_rule = HOME / ".cursor" / "rules" / "pstack-models.mdc"
+    claude_rule = HOME / ".claude" / "rules" / "pstack-models.md"
+    candidates = [rule for rule in (cursor_rule, claude_rule) if rule.is_file()]
+    if not candidates:
+        out("NOTE      no pstack-models rule yet; run /setup-pstack, then rerun --apply")
+        return
+    source = max(candidates, key=lambda rule: rule.stat().st_mtime)
+    data = source.read_bytes()
+    if source == claude_rule:
+        data = b"---\nalwaysApply: true\n---\n" + data
+    destination = OMP_AGENT / "rules" / "pstack-models.md"
+    if write_if_changed(destination, data):
+        out(f"WROTE     {destination} (from {source})")
+
+
+# ---------------------------------------------------------------- modes
+
+def plan() -> int:
+    out("SKILLS PLAN (local state; --apply resolves upstream skill lists)")
+    lock = lock_entries()
+    for source in SOURCES:
+        names = [name for name, entry in lock.items() if entry.get("source") == source.lock_source]
+        kept = [name for name in source.skills if foreign(name, source, lock)]
+        state = f"{len(names)} installed" + (f"; keep foreign {', '.join(kept)}" if kept else "")
+        out(f"INSTALL   {source.label:13} {source.spec} ({state})")
+    retiring = retire_plan()
+    links = [target for kind, target in retiring if kind == "omp-link"]
+    for kind, target in retiring:
+        if kind != "omp-link":
+            out(f"RETIRE    {kind:13} {target}")
+    if links:
+        out(f"RETIRE    {'omp-link':13} {len(links)} links in {OMP_AGENT / 'skills'} into {OMP_VENDOR_CLONE}")
+    return 0
+
+
+def apply(update: bool) -> int:
+    for command in (NPX, "git"):
+        if not shutil.which(command):
+            raise SystemExit(f"FAIL  required command is missing: {command}")
+    with tempfile.TemporaryDirectory(prefix="codex-room-skills-") as temporary:
+        for source in SOURCES:
+            checkout = clone(source, Path(temporary)) if source.sparse else None
+            lock = lock_entries()
+            names = wanted(source, checkout)
+            install, kept = [], []
+            for name in names:
+                if foreign(name, source, lock):
+                    kept.append(name)
+                elif update or not owned(name, source, lock):
+                    install.append(name)
+            for name in kept:
+                out(f"KEEP      {name}: {AGENTS_SKILLS / name} was not installed from {source.lock_source}")
+            if install:
+                run([NPX, "-y", "skills", "add", source.spec, "--skill", *install, "-g", "-y", "-a", *AGENTS])
+            out(f"INSTALLED {source.label:13} {len(install)} added/updated, {len(names) - len(install) - len(kept)} unchanged")
+            if source.label == "pstack" and checkout is not None:
+                install_pstack_adapter(checkout)
+    mirror_pstack_rule()
+    if verify() != 0:
+        raise SystemExit("FAIL  skills verification failed; old copies were not retired")
+    retire(retire_plan())
+    out("SKILLS_APPLY_OK")
+    return 0
+
+
+def verify() -> int:
+    failures: list[str] = []
+    lock = lock_entries()
+    for source in SOURCES:
+        for name in source.required + source.skills:
+            if not (AGENTS_SKILLS / name / "SKILL.md").is_file():
+                failures.append(f"{source.label}: {AGENTS_SKILLS / name}/SKILL.md is missing")
+        for name, entry in lock.items():
+            if entry.get("source") != source.lock_source:
+                continue
+            if not (AGENTS_SKILLS / name / "SKILL.md").is_file():
+                failures.append(f"{name}: locked from {source.lock_source} but {AGENTS_SKILLS / name} is missing")
+            elif not (CLAUDE_SKILLS / name / "SKILL.md").is_file():
+                failures.append(f"{name}: no Claude Code link at {CLAUDE_SKILLS / name}")
+        for name in source.exclude:
+            if lock.get(name, {}).get("source") == source.lock_source:
+                failures.append(f"{name}: installed from {source.lock_source}; that name belongs to another source")
+    for name in RETIRED_SKILLS:
+        if (AGENTS_SKILLS / name).exists():
+            failures.append(f"retired skill still installed: {name}")
+    for failure in failures:
+        out(f"FAIL      {failure}")
+    if not failures:
+        out("SKILLS_VERIFY_OK")
+    return 1 if failures else 0
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--apply", action="store_true")
+    modes.add_argument("--verify", action="store_true")
+    modes.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--update", action="store_true", help="with --apply, reinstall skills already present")
+    arguments = parser.parse_args(argv)
+    if arguments.update and not arguments.apply:
+        parser.error("--update requires --apply")
+    if arguments.apply:
+        return apply(arguments.update)
+    if arguments.verify:
+        return verify()
+    return plan()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

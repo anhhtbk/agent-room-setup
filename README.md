@@ -16,7 +16,7 @@ Paseo provider claude-<role> | omp-<role> | pi-<role>
   -> operator's own runtime, plus role instructions and policy
 ```
 
-This repository deliberately does **not** own `~/.codex`, `~/.claude`, `~/.omp`, or `~/.pi`. Each operator installs and authenticates each runtime independently. The Codex sync reads the operator's existing `~/.codex/config.toml` as its base and shares their auth, skills, plugins, and global `AGENTS.md` by symlink. Hooks are shared only when `hooks.json` exists. Claude Code, omp, and Pi keep the operator's home and login; `agent-room` adds the role per process (see [runtime roles](#claude-code-omp-and-pi-roles)).
+This repository deliberately does **not** own `~/.codex`, `~/.claude`, `~/.omp`, or `~/.pi`; the one exception is the shared agent skills `scripts/install-skills` installs and retires there. Each operator installs and authenticates each runtime independently. The Codex sync reads the operator's existing `~/.codex/config.toml` as its base and shares their auth, skills, plugins, and global `AGENTS.md` by symlink. Hooks are shared only when `hooks.json` exists. Claude Code, omp, and Pi keep the operator's home and login; `agent-room` adds the role per process (see [runtime roles](#claude-code-omp-and-pi-roles)).
 
 ## What gets installed
 
@@ -187,9 +187,8 @@ Human forbids it, and at most three run in parallel with disjoint write scopes.
 
 ### Running a spec
 
-Give Lead a spec with tickets. Lead follows the operator's global skill
-`~/.agents/skills/implement-spec/SKILL.md` (not copied into this repository)
-with the Room mapping in `~/.config/codex-room/workflow/IMPLEMENT_SPEC.md`:
+Give Lead a spec with tickets. Lead follows the self-contained procedure in
+`~/.config/codex-room/workflow/IMPLEMENT_SPEC.md`:
 implementer Peers each work in a Lead-created worktree and branch per
 repository, merger Peers merge them into a local integration branch per
 repository, Lead coordinates `code-review` with two read-only axis Peers per
@@ -292,10 +291,24 @@ official sources and adapter details.
 # Optional sanitized runtime summaries for local comparison
 ./scripts/export-runtime-snapshots
 
+# Shared agent skills (./install --apply runs --apply after the Room publishes)
+./scripts/install-skills                   # plan; local state only
+./scripts/install-skills --apply --update  # also refresh installed skills
+
 # Optional: apply the tracked prompt fixes to installed third-party skills
 ./scripts/patch-skills            # dry-run
 ./scripts/patch-skills --apply
 ```
+
+`scripts/install-skills` installs one shared copy of each skill from the
+sources it lists (mattpocock engineering and productivity, pstack's Claude Code
+tree minus `tdd`/`teach`, grill-with-ui, drawing-excalidraw-figures) with
+`npx skills` into `~/.agents/skills`, linked into `~/.claude/skills`, so
+Claude Code, Codex, and omp read the same files. It then retires the copies it
+replaces: the Claude Code `mattpocock-skills` and `pstack` plugins, omp's
+`pstack` plugin and its `~/.omp/vendor/cursor-plugins` symlinks, and
+`find-skills`. A skill path it did not install (a local dev symlink) is kept.
+It mirrors `/setup-pstack`'s model rule into `~/.omp/agent/rules/`.
 
 `scripts/patch-skills` is an opt-in exception to the ownership boundary above:
 `./install` never runs it. It edits only the `SKILL.md` files of skills named

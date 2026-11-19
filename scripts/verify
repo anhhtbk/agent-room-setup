@@ -98,13 +98,13 @@ check "workspace protocol exists" test -f "$workflow_root/WORKSPACE_PROTOCOL.md"
 check "Paseo provenance manifest exists" test -f "$REPO_ROOT/paseo/source.toml"
 check "Paseo manifest selects the latest stable channel" grep -Fxq 'release_channel = "latest-stable"' "$REPO_ROOT/paseo/source.toml"
 check "Paseo manifest carries no fixed release pin" bash -c '! grep -Eq "^(release_tag|verified_commit|verified_describe) =" "$1"' bash "$REPO_ROOT/paseo/source.toml"
-check "implement-spec Room mapping exists" test -f "$workflow_root/IMPLEMENT_SPEC.md"
+check "implement-spec Room procedure exists" test -f "$workflow_root/IMPLEMENT_SPEC.md"
 for tool in tree-audit.py worktree-guard.py run-procs.py room-gc.py room-close.py paseo-release.py paseo-pi-contract.mjs; do
   check "room tool $tool is executable" test -x "$tools_root/$tool"
 done
 check "Pi contract probe syntax" node --check "$tools_root/paseo-pi-contract.mjs"
-check "Lead routes specs to the global implement-spec skill" grep -Fq "~/.agents/skills/implement-spec/SKILL.md" "$overlays_root/lead.config.toml"
-check "Lead reads the Room implement-spec mapping" grep -Fq "workflow/IMPLEMENT_SPEC.md" "$overlays_root/lead.config.toml"
+check "Lead routes specs to the Room implement-spec procedure" grep -Fq "workflow/IMPLEMENT_SPEC.md" "$overlays_root/lead.config.toml"
+check "implement-spec procedure is self-contained" bash -c '! grep -Fq "skills/implement-spec" "$1"' _ "$workflow_root/IMPLEMENT_SPEC.md"
 check "writable Peers are capped at three" grep -Fq "three at once" "$workflow_root/WORKSPACE_PROTOCOL.md"
 
 for role in supervisor lead peer; do

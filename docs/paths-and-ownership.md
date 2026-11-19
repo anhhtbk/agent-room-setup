@@ -24,6 +24,19 @@ renders it to the path without `.template`. The public installer creates the
 Paseo CLI symlink after the checkout is available. `scripts/install-paseo`
 is a lower-level maintenance helper used by that lifecycle.
 
+## Installed shared skills
+
+```text
+~/.agents/skills/<skill>/          # npx skills canonical copy (Codex, omp)
+~/.claude/skills/<skill> -> ~/.agents/skills/<skill>
+~/.agents/docs/harness/claude-code.md   # pstack adapter, linked from its skills
+~/.claude/docs/harness/claude-code.md
+~/.omp/agent/rules/pstack-models.md     # mirror of /setup-pstack's rule
+```
+
+`scripts/install-skills` (run by `./install --apply`) lists the sources; `npx
+skills` owns the files and `~/.agents/.skill-lock.json`.
+
 ## Patched, not owned
 
 ```text

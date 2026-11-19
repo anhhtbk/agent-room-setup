@@ -49,9 +49,8 @@ một Peer mới ở chế độ chỉ đọc để xem đúng candidate hoặc 
 
 ## Chạy spec (implement-spec)
 
-Khi Human giao cho Lead một spec có ticket, Lead làm theo skill global
-`~/.agents/skills/implement-spec/SKILL.md` (không copy vào repo này hay vào
-project) cùng bảng ánh xạ Room ở `~/.config/codex-room/workflow/IMPLEMENT_SPEC.md`:
+Khi Human giao cho Lead một spec có ticket, Lead làm theo quy trình tự đủ ở
+`~/.config/codex-room/workflow/IMPLEMENT_SPEC.md`:
 
 - Lead tạo integration branch và worktree; mỗi ticket có worktree/branch riêng
   do Lead tạo rồi adopt thành Paseo workspace `local`. Checkout chính của

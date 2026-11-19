@@ -1,10 +1,35 @@
-# implement-spec in the Room
+# Implementing a spec in the Room
 
-Lead runs `~/.agents/skills/implement-spec/SKILL.md` step by step. This file
-maps the skill's subagents and git steps onto Room roles, Paseo, and the
-authority in `WORKSPACE_PROTOCOL.md`. On authority and safety this file and the
-protocol win; everything else follows the skill. Any agent loads a named skill
-(`tdd`, `code-review`) by reading `~/.agents/skills/<name>/SKILL.md`.
+Lead runs this procedure when Human gives a spec with tickets. Authority and
+safety follow `WORKSPACE_PROTOCOL.md`. Any agent loads a named skill (`tdd`,
+`code-review`) by reading `~/.agents/skills/<name>/SKILL.md`.
+
+The goal is the whole spec implemented on one local integration branch per
+repository, every ticket closed the way the project's tracker closes work.
+Tickets are a **task graph** with blocking relationships, not a list: there is
+always a **frontier** of unblocked tickets ready to start. Briefs and reports
+are sparse **context pointers** (spec, tickets, notes, commits), never copies
+of what a pointer already reaches.
+
+## Steps
+
+1. Read the spec and tickets; derive the task graph and its frontier.
+2. Optional: one exploration Peer writes notes to `$RUN/notes/` so
+   implementers spend their context on code, not discovery.
+3. Create `RUN`, the baseline, and the integration branches and worktrees
+   (Git layout steps 1-2).
+4. For each frontier ticket, create its attempt worktrees (Git layout step 3)
+   and a fresh implementer Peer with the Implementer brief.
+5. Disposition each implementer; hand an accepted SHA to a merger Peer
+   (Disposition, merge, review). Mergers run one at a time.
+6. When a merge unblocks tickets, start their implementers at once: keep the
+   frontier busy up to the writable-Peer limit.
+7. After the last merge, run `code-review` per repository and one review-fix
+   implementer plus merger for every valid finding.
+8. Run the Finish check, then close tickets (Ticket closing) and report as
+   Finish says.
+9. Clean up attempt worktrees and caches (Cleanup); run Close once Human has
+   merged the integration branches.
 
 ## Names
 
@@ -27,14 +52,14 @@ protocol win; everything else follows the skill. Any agent loads a named skill
   not be under Paseo's own worktree root (`~/.paseo/worktrees`): archiving a
   workspace there deletes it without a content check.
 
-## Subagents are Peers
+## Peers
 
-| Skill | Room |
+| Role | Room |
 | --- | --- |
-| exploration subagent | Peer, read-only on repositories; writes notes to `$RUN/notes/` |
-| implementer subagent | fresh writable Peer per ticket attempt, in that ticket's worktrees |
-| merger subagent | fresh writable Peer in the integration worktree(s); one at a time |
-| `code-review` call | Lead runs the skill as its coordinator; its parallel sub-agents are two fresh read-only Peers (Standards, Spec) |
+| exploration | Peer, read-only on repositories; writes notes to `$RUN/notes/` |
+| implementer | fresh writable Peer per ticket attempt, in that ticket's worktrees |
+| merger | fresh writable Peer in the integration worktree(s); one at a time |
+| `code-review` axes | Lead runs the skill as its coordinator; its parallel sub-agents are two fresh read-only Peers (Standards, Spec) |
 | review-fix implementer | one writable Peer in its own worktrees, then a merger |
 
 Create each Peer with the Paseo agent tool in the adopted workspace of its
@@ -118,10 +143,10 @@ states:
 - After all tickets: Lead runs `code-review` as its coordinator with fixed
   point `<base>`, once per repository `R` with changes. Its two sub-agents are
   two read-only Peers per repository (Standards, Spec) working in the adopted
-  `I_R`, each given the skill's step-4 prompt. Lead presents their reports as
-  the skill's step 5 says (separate axes, no merging or reranking). Per skill
-  step 7 every valid finding is fixed; a finding Lead judges invalid is
-  recorded with the reason (Lead's technical acceptance under the protocol).
+  `I_R`, each given the prompt from the skill's spawn step; Lead presents
+  their reports as its aggregate step says. Every valid finding is fixed; a
+  finding Lead judges invalid is recorded with the reason (Lead's technical
+  acceptance under the protocol).
   One review-fix implementer (ticket id `rf`, same naming and baseline rules)
   and a merger follow.
 - Ticket closing: a local tracker (Markdown files) is updated by Lead as the
@@ -146,7 +171,7 @@ disposition without a verified digest, means the worktree's bytes have no
 proven origin: keep it, mark it `cleanup-blocked`, and ask Human. Lead never
 records on a writer's behalf.
 
-At skill step 9, per ticket-attempt worktree (accepted or rejected): archive
+At step 9, per ticket-attempt worktree (accepted or rejected): archive
 its adopted workspace (the response must show `removedDirectory: false`), then
 `python3 $T/worktree-guard.py remove <manifest> --owner <slug> --digest <digest from the disposition>`,
 then delete the Paseo project registered for that path (files stay):

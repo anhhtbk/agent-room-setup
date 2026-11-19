@@ -29,6 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HOME_MIRROR = ROOT / "home"
 SYNC_SOURCE = HOME_MIRROR / ".local" / "bin" / "codex-room-sync"
 VERIFY_SOURCE = ROOT / "scripts" / "verify"
+SKILLS_SOURCE = ROOT / "scripts" / "install-skills"
 PASEO_SOURCE = ROOT / "scripts" / "install-paseo"
 PASEO_RELEASE_SOURCE = ROOT / "home" / ".config" / "codex-room" / "tools" / "paseo-release.py"
 LEGACY_SOURCE_ROOT = ROOT / "paseo" / "legacy"
@@ -65,8 +66,8 @@ OBSOLETE_HASHES = {
     ".config/codex-room/workflow/SUPERVISOR_NOTEBOOK.md": {
         "d644212642909ba20c4960503f89ef74b4897e39cf4096f5c9c1df2c686d430f",
     },
-    # spec-orchestration was replaced by ~/.agents/skills/implement-spec with
-    # workflow/IMPLEMENT_SPEC.md; its helpers moved to tools/.
+    # spec-orchestration was replaced by workflow/IMPLEMENT_SPEC.md; its
+    # helpers moved to tools/.
     f"{SPEC_ORCHESTRATION}/SKILL.md": {
         "db02670871fd7a8a59bc6d9acfbbb1e2284c6c159792b16308a286b39ca162b3",
     },
@@ -1129,6 +1130,19 @@ def stage_home(stage: Path, home: Path) -> dict[str, Path]:
     return rendered
 
 
+def run_skills(home: Path, mode: str) -> int:
+    """Shared agent skills live outside the Room transaction: npx owns them."""
+    skills_bin = os.environ.get("CODEX_ROOM_SKILLS_BIN", str(SKILLS_SOURCE))
+    environment = os.environ.copy()
+    environment["HOME"] = str(home)
+    try:
+        return subprocess.run([skills_bin, mode], env=environment, text=True).returncode
+    except OSError as error:
+        # Never an OSError for apply_install's handler: the Room is already published.
+        warn(f"cannot run {skills_bin}: {error}")
+        return 1
+
+
 def print_plan(home: Path) -> int:
     manifest = parse_manifest()
     paths = configured_paths(home, manifest)
@@ -1164,6 +1178,10 @@ def print_plan(home: Path) -> int:
         out(f"OPTIONAL  {runtime} runtime for agent-room roles: {state}")
     out("APPLY     staged Paseo/config/runtime publication with rollback on failure")
     out("VERIFY    installed state plus live provider inventory (use --verify; read-only)")
+    sys.stdout.flush()
+    if run_skills(home, "--dry-run"):
+        warn("skills plan failed")
+        return 1
     try:
         check_commands(False)
         check_configured_path_safety(paths, home)
@@ -1296,6 +1314,11 @@ def apply_install(home: Path) -> int:
             assert transaction is not None
             restrict_tree(transaction.root)
             out(f"CODEX_ROOM_APPLY_OK backup={transaction.root}")
+            # The Room is published; a skills failure leaves it in place and
+            # is rerun with ./install --apply or scripts/install-skills --apply.
+            if run_skills(home, "--apply"):
+                warn("shared skills install failed; rerun scripts/install-skills --apply")
+                return 1
             return 0
         except (InstallError, OSError, subprocess.CalledProcessError) as error:
             if transaction is not None:
@@ -1323,7 +1346,8 @@ def verify_install(home: Path, live: bool) -> int:
     # diagnostics during development.
     arguments = [verify_bin, "--live"]
     completed = subprocess.run(arguments, env=environment, text=True)
-    return completed.returncode
+    skills = run_skills(home, "--verify")
+    return completed.returncode or skills
 
 
 def parse_arguments(argv: Iterable[str]) -> argparse.Namespace:

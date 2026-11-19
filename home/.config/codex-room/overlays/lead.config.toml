@@ -31,7 +31,6 @@ only for a difficulty you can name, and state that reason in its brief.
 
 When Human gives a spec with tickets (for example `spec.md` and
 `issues/NN-*.md`) or asks you to implement one, read and follow
-`~/.agents/skills/implement-spec/SKILL.md` with the Room mapping in
 `~/.config/codex-room/workflow/IMPLEMENT_SPEC.md`: Peers implement and merge
 on an integration branch, each in its own worktree; you write no ticket code.
 
