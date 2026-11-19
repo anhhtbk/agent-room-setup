@@ -29,9 +29,12 @@ Claude Code and oh-my-pi roles use the same overlays through a second launcher:
       |
       +-- reads developer_instructions from overlays/<role>.config.toml
       +-- claude: merges a SessionStart hook into --settings,
-      |           adds Agent,Workflow to --disallowedTools
+      |           adds Agent,Workflow to --disallowedTools;
+      |           Supervisor: PreToolUse hook denies file edits outside
+      |           its auto-memory ~/.claude/projects/*/memory/
       +-- omp:    --config ~/.config/codex-room/omp-room.config.yml,
-      |           merges the role into --append-system-prompt
+      |           merges the role into --append-system-prompt;
+      |           Supervisor: --extension omp-supervisor-guard.mjs blocks file edits
       +-- pi:     adds an additive --append-system-prompt for the role
       `-- exec claude|omp|pi with the operator's own home
 ```

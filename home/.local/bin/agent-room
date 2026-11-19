@@ -21,6 +21,10 @@ Role policy is applied per process instead:
   stops a Paseo Supervisor/Lead session that arrives without Paseo tools.
 * Native subagents are disabled (Claude ``Agent``/``Workflow`` tools; omp ``task``
   tool via a config overlay) so delegation goes through Paseo roles.
+* Supervisor does not edit project files: a Claude ``PreToolUse`` hook denies
+  ``Edit``/``Write``/``NotebookEdit`` outside its auto-memory
+  (``~/.claude/projects/*/memory/``), and an omp extension blocks omp's
+  file-changing tools. Shell writes are not covered.
 
 Probe and subcommand invocations (``--version``, ``auth status``, ...) run
 unchanged.
@@ -59,12 +63,21 @@ os.environ.pop(REEXEC_TRIED, None)
 RUNTIMES = ("claude", "omp", "pi")
 ROLES = ("supervisor", "lead", "peer")
 SESSION_START_MODE = "--claude-session-start"
+PRE_TOOL_USE_MODE = "--claude-pre-tool-use"
 APPEND_FLAG = "--append-system-prompt"
 SETTINGS_FLAG = "--settings"
 CLAUDE_DISALLOWED_FLAGS = ("--disallowedTools", "--disallowed-tools")
 # Agent spawns subagents; Workflow fans out background agents.
 CLAUDE_SUBAGENT_TOOLS = ("Agent", "Workflow")
+# Claude file-editing tools the Supervisor guard applies to (MultiEdit in older releases).
+CLAUDE_FILE_TOOLS = ("Edit", "MultiEdit", "Write", "NotebookEdit")
+SUPERVISOR_EDIT_DENIAL = (
+    "Room Supervisor does not edit project files or Claude configuration; only its "
+    "auto-memory under ~/.claude/projects/*/memory/ is writable. Route this change to "
+    "the project's Lead (send it to the Lead agent) instead of making it yourself."
+)
 OMP_OVERLAY = "omp-room.config.yml"
+OMP_SUPERVISOR_GUARD = "omp-supervisor-guard.mjs"
 PROBE_ARGS = {"--version", "-v", "-V", "--help", "-h"}
 PI_SUBCOMMANDS = {"install", "remove", "uninstall", "update", "list", "config", "auth", "mcp"}
 USAGE = f"usage: agent-room <{'|'.join(RUNTIMES)}> <{'|'.join(ROLES)}> [runtime args...]"
@@ -173,6 +186,12 @@ def claude_args(args: list[str], role: str) -> list[str]:
     hook = shlex.join([str(pathlib.Path(__file__).resolve()), SESSION_START_MODE, role])
     hooks = settings.setdefault("hooks", {})
     hooks.setdefault("SessionStart", []).append({"hooks": [{"type": "command", "command": hook}]})
+    if role == "supervisor":
+        guard = shlex.join([str(pathlib.Path(__file__).resolve()), PRE_TOOL_USE_MODE, role])
+        hooks.setdefault("PreToolUse", []).append({
+            "matcher": "|".join(CLAUDE_FILE_TOOLS),
+            "hooks": [{"type": "command", "command": guard}],
+        })
 
     args, denied = take_flag(args, CLAUDE_DISALLOWED_FLAGS)
     tools = [tool for value in denied for tool in value.split(",") if tool]
@@ -198,7 +217,13 @@ def omp_args(args: list[str], role: str) -> list[str]:
             host = pathlib.Path(host).read_text()
         if host.strip():
             prompt = f"{role_text}\n\n{host}"
-    return ["--config", str(overlay), APPEND_FLAG, prompt, *args]
+    extra = []
+    if role == "supervisor":
+        guard = room_config_home() / OMP_SUPERVISOR_GUARD
+        if not guard.is_file():
+            raise SystemExit(f"omp Supervisor guard is missing: {guard}")
+        extra = ["--extension", str(guard)]
+    return ["--config", str(overlay), *extra, APPEND_FLAG, prompt, *args]
 
 
 def claude_session_start(role: str) -> None:
@@ -215,6 +240,45 @@ def claude_session_start(role: str) -> None:
     }))
 
 
+def supervisor_edit_denial(event: object) -> str | None:
+    """Why a Supervisor file edit is denied, or None for its auto-memory."""
+    if not isinstance(event, dict) or not isinstance(event.get("tool_input"), dict):
+        return SUPERVISOR_EDIT_DENIAL
+    tool_input = event["tool_input"]
+    target = tool_input.get("file_path") or tool_input.get("notebook_path")
+    if not isinstance(target, str) or not target:
+        return SUPERVISOR_EDIT_DENIAL
+    cwd = event.get("cwd") if isinstance(event.get("cwd"), str) else os.getcwd()
+    # realpath follows symlinks, so a link inside memory/ cannot reach other files.
+    resolved = pathlib.Path(os.path.realpath(os.path.join(cwd, os.path.expanduser(target))))
+    projects = pathlib.Path(os.path.realpath(pathlib.Path.home() / ".claude" / "projects"))
+    if resolved.is_relative_to(projects):
+        # <project slug>/memory/<file...>
+        parts = resolved.relative_to(projects).parts
+        if len(parts) >= 3 and parts[1] == "memory":
+            return None
+    return SUPERVISOR_EDIT_DENIAL
+
+
+def claude_pre_tool_use() -> None:
+    """Claude Code PreToolUse hook for the Supervisor: deny edits outside auto-memory.
+
+    A hook that errors lets the tool run, so every failure here denies."""
+    try:
+        reason = supervisor_edit_denial(json.loads(sys.stdin.read() or "{}"))
+    except Exception:  # fail closed
+        reason = SUPERVISOR_EDIT_DENIAL
+    if reason is None:
+        return
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }
+    }))
+
+
 def main() -> None:
     if len(sys.argv) < 3:
         raise SystemExit(USAGE)
@@ -223,6 +287,9 @@ def main() -> None:
         raise SystemExit(f"unknown role: {role}\n{USAGE}")
     if first == SESSION_START_MODE and not args:
         claude_session_start(role)
+        return
+    if first == PRE_TOOL_USE_MODE and not args:
+        claude_pre_tool_use()
         return
     if first not in RUNTIMES:
         raise SystemExit(f"unknown runtime: {first}\n{USAGE}")

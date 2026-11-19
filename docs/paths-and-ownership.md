@@ -5,6 +5,7 @@
 ```text
 ~/.config/codex-room/model-instructions.md
 ~/.config/codex-room/omp-room.config.yml
+~/.config/codex-room/omp-supervisor-guard.mjs
 ~/.config/codex-room/pi-mcp-adapter.mjs
 ~/.config/codex-room/overlays/*.config.toml
 ~/.config/codex-room/tools/{tree-audit,worktree-guard,run-procs,room-gc,room-close,paseo-release}.py

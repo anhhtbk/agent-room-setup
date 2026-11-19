@@ -128,6 +128,7 @@ done <<'EOF'
 .config/codex-room/overlays/peer.config.toml|.config/codex-room/overlays/peer.config.toml|600
 .config/codex-room/workflow/WORKSPACE_PROTOCOL.md|.config/codex-room/workflow/WORKSPACE_PROTOCOL.md|644
 .config/codex-room/omp-room.config.yml|.config/codex-room/omp-room.config.yml|644
+.config/codex-room/omp-supervisor-guard.mjs|.config/codex-room/omp-supervisor-guard.mjs|644
 .config/codex-room/pi-mcp-adapter.mjs|.config/codex-room/pi-mcp-adapter.mjs|644
 .config/codex-room/workflow/IMPLEMENT_SPEC.md|.config/codex-room/workflow/IMPLEMENT_SPEC.md|644
 .config/codex-room/tools/tree-audit.py|.config/codex-room/tools/tree-audit.py|755

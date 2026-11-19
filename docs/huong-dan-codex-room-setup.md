@@ -138,12 +138,18 @@ process:
 
 - Claude Code: thêm hook `SessionStart` vào `--settings` để nạp chỉ dẫn role
   (kể cả sau resume/compact) và chặn `Agent`, `Workflow` bằng
-  `--disallowedTools`.
+  `--disallowedTools`. Riêng Supervisor có thêm hook `PreToolUse` chặn
+  `Edit`, `Write`, `NotebookEdit` ở mọi nơi trừ auto-memory
+  `~/.claude/projects/*/memory/` (cả `settings.json`, `CLAUDE.md`, `rules/`
+  đều bị chặn) và báo agent chuyển thay đổi cho Lead.
 - omp: nạp `~/.config/codex-room/omp-room.config.yml` bằng `--config`
   (`task.maxRecursionDepth: 0` gỡ tool `task`; `modelRoles.smol` cho các job
   nền của omp như auto-thinking, job caption chạy Sonnet 5.5, các role model
   khác giữ theo `~/.omp/agent/config.yml`) và gộp chỉ dẫn role với
-  `--append-system-prompt` mà Paseo truyền vào.
+  `--append-system-prompt` mà Paseo truyền vào. Riêng Supervisor có thêm
+  `--extension ~/.config/codex-room/omp-supervisor-guard.mjs` chặn `edit`,
+  `ast_edit`, `write` vào file và các action `lsp` sửa file. Bash và `eval`
+  của cả hai runtime chưa bị chặn.
 - Pi (pi.dev, không phải omp): dùng `pi-supervisor`, `pi-lead`, `pi-peer`
   qua adapter Pi/RPC của Paseo. Thêm role bằng một `--append-system-prompt`
   riêng; Pi tự xử lý các append text/file còn lại. Giữ nguyên

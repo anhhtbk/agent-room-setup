@@ -222,6 +222,7 @@ source, and then execs the operator's `claude`, `omp`, or `pi`:
 | --- | --- | --- |
 | Role instructions | `SessionStart` hook merged into `--settings` (re-injected after compaction) | merged into the single `--append-system-prompt` |
 | Native subagents | `--disallowedTools Agent,Workflow` | `--config ~/.config/codex-room/omp-room.config.yml` (`task.maxRecursionDepth: 0`) |
+| Supervisor file edits | `PreToolUse` hook denies `Edit`/`Write`/`NotebookEdit` everywhere except its auto-memory `~/.claude/projects/*/memory/` | `--extension ~/.config/codex-room/omp-supervisor-guard.mjs` blocks `edit`, `ast_edit`, file `write`, and file-changing `lsp` actions |
 | Paseo tools | Supervisor/Lead only (MCP) | Supervisor/Lead only (native host tools) |
 | Home and login | operator `~/.claude` | operator `~/.omp` |
 

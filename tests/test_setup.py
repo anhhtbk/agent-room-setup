@@ -1753,6 +1753,90 @@ class AgentRoomLauncherTests(unittest.TestCase):
         [prompt] = self.flag_values(argv, "--append-system-prompt")
         self.assertTrue(prompt.endswith("\n\nfrom file"))
 
+    def edit_guard(self, argv: list[str]) -> list[tuple[str, str]]:
+        settings = json.loads(self.flag_values(argv, "--settings")[0])
+        entries = settings["hooks"].get("PreToolUse", [])
+        return [(entry["matcher"], hook["command"]) for entry in entries for hook in entry["hooks"]]
+
+    def test_claude_supervisor_edits_are_denied_outside_auto_memory(self) -> None:
+        [(matcher, command)] = self.edit_guard(self.launch("claude", "supervisor", "--verbose"))
+        self.assertEqual(set(matcher.split("|")) & {"Edit", "Write", "NotebookEdit"}, {"Edit", "Write", "NotebookEdit"})
+        home = self.root / "home"
+        memory = home / ".claude" / "projects" / "-work-app" / "memory"
+        memory.mkdir(parents=True)
+        project = self.root / "app"
+        project.mkdir()
+        (memory / "escape.md").symlink_to(project / "README.md")
+        env = {**self.env, "HOME": str(home)}
+
+        def decide(event: object) -> dict | None:
+            stdin = event if isinstance(event, str) else json.dumps(event)
+            result = subprocess.run(shlex.split(command), input=stdin, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            return json.loads(result.stdout)["hookSpecificOutput"] if result.stdout.strip() else None
+
+        for tool, tool_input in (
+            ("Write", {"file_path": str(project / "main.py"), "content": "x"}),
+            ("Edit", {"file_path": "main.py", "old_string": "a", "new_string": "b"}),
+            ("NotebookEdit", {"notebook_path": str(project / "nb.ipynb"), "new_source": "x"}),
+            ("Write", {"file_path": str(home / ".claude" / ".." / "app.py"), "content": "x"}),
+            ("Write", {"file_path": str(memory / "escape.md"), "content": "x"}),
+            ("Write", {"file_path": "~/.claude/settings.json", "content": "{}"}),
+            ("Edit", {"file_path": str(home / ".claude" / "CLAUDE.md"), "old_string": "a", "new_string": "b"}),
+            ("Write", {"file_path": str(home / ".claude" / "projects" / "x" / "notes.md"), "content": "x"}),
+            ("Write", {"file_path": str(home / ".claude" / "projects" / "x" / "memory"), "content": "x"}),
+            ("Write", {"file_path": str(memory / ".." / ".." / "y" / "memory" / ".." / "notes.md"), "content": "x"}),
+        ):
+            decision = decide({"tool_name": tool, "tool_input": tool_input, "cwd": str(project)})
+            self.assertEqual(decision["permissionDecision"], "deny", (tool, tool_input))
+            self.assertIn("Lead", decision["permissionDecisionReason"])
+        self.assertEqual(decide("not json")["permissionDecision"], "deny")
+        for tool_input in (
+            {"file_path": str(memory / "MEMORY.md"), "content": "x"},
+            {"file_path": "~/.claude/projects/other/memory/topic/note.md", "content": "x"},
+        ):
+            self.assertIsNone(decide({"tool_name": "Write", "tool_input": tool_input, "cwd": str(project)}), tool_input)
+
+    def test_omp_supervisor_loads_edit_guard_that_blocks_file_tools(self) -> None:
+        argv = self.launch("omp", "supervisor", "--mode", "rpc")
+        [guard] = self.flag_values(argv, "--extension")
+        self.assertEqual(guard, str(ROOM / "omp-supervisor-guard.mjs"))
+        cases = [
+            ("edit", {"input": "[a.py#1A2B]\nPUT 1.=1:\n+x", "path": "a.py"}, True),
+            ("apply_patch", {"input": "*** Begin Patch"}, True),
+            ("ast_edit", {"ops": [{"pat": "a", "out": "b"}], "paths": ["src"]}, True),
+            ("write", {"path": "src/a.py", "content": "x"}, True),
+            ("write", {"path": "/abs/a.zip:inner.txt", "content": "x"}, True),
+            ("write", {"path": "conflict://1", "content": "@ours"}, True),
+            ("lsp", {"action": "rename", "file": "a.py", "new_name": "b"}, True),
+            ("lsp", {"action": "code_actions", "apply": True}, True),
+            ("write", {"path": "xd://report_issue", "content": "x"}, False),
+            ("write", {"path": "agent://lead", "content": "please fix"}, False),
+            ("write", {"path": "local://notes.md", "content": "x"}, False),
+            ("lsp", {"action": "references", "file": "a.py"}, False),
+            ("lsp", {"action": "rename", "file": "a.py", "new_name": "b", "apply": False}, False),
+            ("read", {"path": "src/a.py"}, False),
+        ]
+        script = (
+            "const { default: guard } = await import(process.argv[1]);"
+            "let handler; guard({ on: (name, fn) => { if (name === 'tool_call') handler = fn; } });"
+            "const out = [];"
+            "for (const [toolName, input] of JSON.parse(process.argv[2]))"
+            "  out.push((await handler({ type: 'tool_call', toolName, input }))?.block === true);"
+            "console.log(JSON.stringify(out));"
+        )
+        result = subprocess.run(
+            ["node", "--input-type=module", "-e", script, Path(guard).as_uri(),
+             json.dumps([[tool, tool_input] for tool, tool_input, _ in cases])],
+            capture_output=True, text=True, check=True,
+        )
+        self.assertEqual(json.loads(result.stdout), [blocked for _, _, blocked in cases])
+
+    def test_lead_and_peer_have_no_edit_guard(self) -> None:
+        for role in ("lead", "peer"):
+            self.assertEqual(self.edit_guard(self.launch("claude", role, "--verbose")), [], role)
+            self.assertNotIn("--extension", self.launch("omp", role, "--mode", "rpc"), role)
+
     def test_probes_and_subcommands_pass_through_unchanged(self) -> None:
         self.assertEqual(self.launch("claude", "lead", "--version"), ["--version"])
         self.assertEqual(self.launch("claude", "lead", "auth", "status"), ["auth", "status"])
@@ -1822,12 +1906,15 @@ class AgentRoomLauncherTests(unittest.TestCase):
         broken = self.root / "room"
         (broken / "overlays").mkdir(parents=True)
         (broken / "overlays/lead.config.toml").write_text('model = "x"\n')
+        (broken / "overlays/supervisor.config.toml").write_text('developer_instructions = "Room role: Supervisor."\n')
         (broken / "omp-room.config.yml").write_text("task:\n  maxRecursionDepth: 0\n")
         cases = [
             (("claude", "review"), self.env),
             (("codex", "lead"), self.env),
             (("claude", "lead", "--verbose"), {**self.env, "CODEX_ROOM_CONFIG_HOME": str(broken)}),
             (("omp", "lead", "--mode", "rpc"), {**self.env, "CODEX_ROOM_CONFIG_HOME": str(broken)}),
+            # The overlay is present but the Supervisor guard is not.
+            (("omp", "supervisor", "--mode", "rpc"), {**self.env, "CODEX_ROOM_CONFIG_HOME": str(broken)}),
             (("pi", "lead", "--mode", "rpc"), {**self.env, "CODEX_ROOM_CONFIG_HOME": str(broken)}),
         ]
         for args, env in cases:

@@ -28,7 +28,8 @@ The operator's `~/.codex` is incomplete for this setup. Check the exact missing 
    `agent-room <runtime> <role> --version`, so the runtime must be on the
    daemon's PATH or set through `CLAUDE_BIN`/`OMP_BIN`/`PI_BIN`.
 2. `agent-room` fails before exec when the role overlay has no
-   `developer_instructions` or the omp-specific `omp-room.config.yml` is missing.
+   `developer_instructions`, the omp-specific `omp-room.config.yml` is missing,
+   or (omp Supervisor) `omp-supervisor-guard.mjs` is missing.
 3. `agent-room` needs Python 3.11+ (`tomllib`). When the daemon PATH resolves
    `python3` to an older interpreter (macOS `/usr/bin/python3` is 3.9), it
    re-execs under the first `python3.14`…`python3.11` on that PATH and fails
